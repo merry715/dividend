@@ -1,0 +1,15 @@
+2026-04-30 12:49:25.604705+09:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "TRANSACTION" not found (this database is empty); SQL statement:
+select t1_0.id,t1_0.fee,t1_0.price,t1_0.quantity,t1_0.stock_id,t1_0.trade_date,t1_0.trade_type from transaction t1_0 [42104-240]
+2026-04-30 12:49:27.554902+09:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "TRANSACTION" not found (this database is empty); SQL statement:
+select t1_0.id,t1_0.fee,t1_0.price,t1_0.quantity,t1_0.stock_id,t1_0.trade_date,t1_0.trade_type from transaction t1_0 [42104-240]
+2026-04-30 12:49:36.602554+09:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "TRANSACTION" not found (this database is empty); SQL statement:
+select t1_0.id,t1_0.fee,t1_0.price,t1_0.quantity,t1_0.stock_id,t1_0.trade_date,t1_0.trade_type from transaction t1_0 [42104-240]
+2026-04-30 12:49:44.952227+09:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "TRANSACTION" not found (this database is empty); SQL statement:
+select t1_0.id,t1_0.fee,t1_0.price,t1_0.quantity,t1_0.stock_id,t1_0.trade_date,t1_0.trade_type from transaction t1_0 [42104-240]
+2026-04-30 12:50:12.719833+09:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "TRANSACTION" not found (this database is empty); SQL statement:
+select t1_0.id,t1_0.fee,t1_0.price,t1_0.quantity,t1_0.stock_id,t1_0.trade_date,t1_0.trade_type from transaction t1_0 [42104-240]

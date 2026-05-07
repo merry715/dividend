@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>배당 정보 관리</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+    <div class="logo">Dividend Manager</div>
+    <div class="menu">
+        <a href="/">대시보드</a>
+        <a href="/stocks">종목</a>
+        <a href="/transactions">거래</a>
+        <a href="/dividends">배당</a>
+        <a href="/analysis">분석</a>
+    </div>
+</div>
+
+<div class="container">
+
+<div class="page-header">
+    <h1>배당 정보</h1>
+    <p>종목별 배당금과 지급월을 관리합니다.</p>
+</div>
+
+<div class="page-layout">
+
+    <div class="main-content">
+
+        <div class="section">
+            <h2 class="section-title">배당 정보 추가</h2>
+            <form class="form-box" action="/dividends/add" method="post">
+                <select name="stockId" required>
+                    <option value="">종목을 선택하세요</option>
+                    <option th:each="stock : ${stocks}"
+                            th:value="${stock.id}"
+                            th:text="${stock.stockName}">
+                    </option>
+                </select>
+                <input type="number" name="dividendPerShare" placeholder="1주당 배당금" min="1" required>
+                <input type="number" name="paymentMonth" placeholder="지급월(1~12)" min="1" max="12" required>
+                <select name="status">
+                    <option value="예상">예상</option>
+                    <option value="확정">확정</option>
+                </select>
+                <button type="submit" class="btn">저장</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">배당 정보 목록</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>종목</th>
+                    <th class="text-right">1주당 배당금</th>
+                    <th class="text-right">지급월</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="dividend : ${dividends}">
+                    <td th:text="${dividend.stock.stockName}">SK텔레콤</td>
+                    <td class="text-right" th:text="${#numbers.formatInteger(dividend.dividendPerShare, 1, 'COMMA')}">830</td>
+                    <td class="text-right" th:text="${dividend.paymentMonth} + '월'">5월</td>
+                    <td th:text="${dividend.status}">예상</td>
+                    <td>
+                        <button type="button" class="btn btn-warning btn-small"
+                                th:data-id="${dividend.id}"
+                                th:data-stockid="${dividend.stock.id}"
+                                th:data-dividendpershare="${dividend.dividendPerShare}"
+                                th:data-paymentmonth="${dividend.paymentMonth}"
+                                th:data-status="${dividend.status}"
+                                onclick="openEdit(this)">
+                            수정
+                        </button>
+                        <a th:href="@{/dividends/delete/{id}(id=${dividend.id})}"
+                           class="btn btn-danger btn-small"
+                           onclick="return confirm('배당 정보를 삭제하시겠습니까?')">
+                            삭제
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="edit-panel" id="editPanel" style="display:none">
+        <div class="edit-panel-header">
+            <h3>배당정보 수정</h3>
+            <button type="button" class="edit-panel-close" onclick="document.getElementById('editPanel').style.display='none'">&#x2715;</button>
+        </div>
+        <form class="form-box" action="/dividends/update" method="post">
+            <input type="hidden" name="id" id="editId">
+            <select name="stockId" id="editStockId" required>
+                <option th:each="stock : ${stocks}"
+                        th:value="${stock.id}"
+                        th:text="${stock.stockName}">
+                </option>
+            </select>
+            <input type="number" name="dividendPerShare" id="editDividendPerShare" placeholder="1주당 배당금" min="1" required>
+            <input type="number" name="paymentMonth" id="editPaymentMonth" placeholder="지급월(1~12)" min="1" max="12" required>
+            <select name="status" id="editStatus">
+                <option value="예상">예상</option>
+                <option value="확정">확정</option>
+            </select>
+            <button type="submit" class="btn">수정 저장</button>
+        </form>
+    </div>
+
+</div>
+</div>
+
+<script>
+    function openEdit(btn) {
+        document.getElementById('editId').value = btn.dataset.id;
+        document.getElementById('editStockId').value = btn.dataset.stockid;
+        document.getElementById('editDividendPerShare').value = btn.dataset.dividendpershare;
+        document.getElementById('editPaymentMonth').value = btn.dataset.paymentmonth;
+        document.getElementById('editStatus').value = btn.dataset.status;
+        document.getElementById('editPanel').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>

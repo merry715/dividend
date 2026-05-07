@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>거래내역</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+    <div class="logo">Dividend Manager</div>
+    <div class="menu">
+        <a href="/">대시보드</a>
+        <a href="/stocks">종목</a>
+        <a href="/transactions">거래</a>
+        <a href="/dividends">배당</a>
+        <a href="/analysis">분석</a>
+    </div>
+</div>
+
+<div class="container">
+
+<div class="page-header">
+    <h1>거래 내역</h1>
+    <p>매수·매도 거래를 기록하고 관리합니다.</p>
+</div>
+
+<div class="page-layout">
+
+    <div class="main-content">
+
+        <div class="section">
+            <h2 class="section-title">거래 추가</h2>
+            <form class="form-box" action="/transactions/add" method="post">
+                <select name="stockId" required>
+                    <option value="">종목을 선택하세요</option>
+                    <option th:each="stock : ${stocks}"
+                            th:value="${stock.id}"
+                            th:text="${stock.stockName}">
+                    </option>
+                </select>
+                <input type="date" name="tradeDate" required>
+                <select name="tradeType">
+                    <option value="매수">매수</option>
+                    <option value="매도">매도</option>
+                </select>
+                <input type="number" name="quantity" placeholder="수량" min="1" required>
+                <input type="number" name="price" placeholder="단가" min="1" required>
+                <input type="number" name="fee" placeholder="수수료" min="0" required>
+                <button type="submit" class="btn">저장</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">거래 내역</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>거래일</th>
+                    <th>종목</th>
+                    <th>유형</th>
+                    <th class="text-right">수량</th>
+                    <th class="text-right">단가</th>
+                    <th class="text-right">수수료</th>
+                    <th>관리</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="tx : ${transactions}">
+                    <td th:text="${tx.tradeDate}">2026-04-29</td>
+                    <td th:text="${tx.stock.stockName}">SK텔레콤</td>
+                    <td th:text="${tx.tradeType}">매수</td>
+                    <td class="text-right" th:text="${tx.quantity}">3</td>
+                    <td class="text-right" th:text="${#numbers.formatInteger(tx.price, 1, 'COMMA')}">55,000</td>
+                    <td class="text-right" th:text="${#numbers.formatInteger(tx.fee, 1, 'COMMA')}">0</td>
+                    <td>
+                        <button type="button" class="btn btn-warning btn-small"
+                                th:data-id="${tx.id}"
+                                th:data-stockid="${tx.stock.id}"
+                                th:data-tradedate="${tx.tradeDate}"
+                                th:data-tradetype="${tx.tradeType}"
+                                th:data-quantity="${tx.quantity}"
+                                th:data-price="${tx.price}"
+                                th:data-fee="${tx.fee}"
+                                onclick="openEdit(this)">
+                            수정
+                        </button>
+                        <a th:href="@{/transactions/delete/{id}(id=${tx.id})}"
+                           class="btn btn-danger btn-small"
+                           onclick="return confirm('거래내역을 삭제하시겠습니까?')">
+                            삭제
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="edit-panel" id="editPanel" style="display:none">
+        <div class="edit-panel-header">
+            <h3>거래내역 수정</h3>
+            <button type="button" class="edit-panel-close" onclick="document.getElementById('editPanel').style.display='none'">&#x2715;</button>
+        </div>
+        <form class="form-box" action="/transactions/update" method="post">
+            <input type="hidden" name="id" id="editId">
+            <select name="stockId" id="editStockId" required>
+                <option th:each="stock : ${stocks}"
+                        th:value="${stock.id}"
+                        th:text="${stock.stockName}">
+                </option>
+            </select>
+            <input type="date" name="tradeDate" id="editTradeDate" required>
+            <select name="tradeType" id="editTradeType">
+                <option value="매수">매수</option>
+                <option value="매도">매도</option>
+            </select>
+            <input type="number" name="quantity" id="editQuantity" placeholder="수량" min="1" required>
+            <input type="number" name="price" id="editPrice" placeholder="단가" min="1" required>
+            <input type="number" name="fee" id="editFee" placeholder="수수료" min="0" required>
+            <button type="submit" class="btn">수정 저장</button>
+        </form>
+    </div>
+
+</div>
+</div>
+
+<script>
+    function openEdit(btn) {
+        document.getElementById('editId').value = btn.dataset.id;
+        document.getElementById('editStockId').value = btn.dataset.stockid;
+        document.getElementById('editTradeDate').value = btn.dataset.tradedate;
+        document.getElementById('editTradeType').value = btn.dataset.tradetype;
+        document.getElementById('editQuantity').value = btn.dataset.quantity;
+        document.getElementById('editPrice').value = btn.dataset.price;
+        document.getElementById('editFee').value = btn.dataset.fee;
+        document.getElementById('editPanel').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
