@@ -1,52 +1,71 @@
 package com.example.dividend.controller;
 
+import com.example.dividend.dto.ApiResponse;
 import com.example.dividend.entity.Stock;
-import com.example.dividend.repository.StockRepository;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import com.example.dividend.service.StockService;
 import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+@RestController
+@RequestMapping("/api/v1/stocks")
 public class StockController {
 
-    private final StockRepository stockRepository;
+    private final StockService stockService;
 
-    public StockController(StockRepository stockRepository) {
-        this.stockRepository = stockRepository;
+    public StockController(StockService stockService) {
+        this.stockService = stockService;
     }
 
-    @GetMapping("/stocks")
-    public String stocks(Model model) {
-        model.addAttribute("stocks", stockRepository.findAll());
-        return "stocks";
+    // 전체 보유 종목 조회
+    @GetMapping
+    public ApiResponse<List<Stock>> getAll() {
+        return ApiResponse.ok(stockService.getAll());
     }
 
-    @PostMapping("/stocks/add")
-    public String addStock(Stock stock) {
-        stockRepository.save(stock);
-        return "redirect:/stocks";
+    // 종목 추가
+    @PostMapping
+    public ApiResponse<Stock> add(@RequestBody Stock stock) {
+        return ApiResponse.ok(stockService.add(stock), "종목이 추가되었습니다");
     }
 
-    @PostMapping("/stocks/update")
-    public String updateStock(@RequestParam Long id,
-                              @RequestParam String stockName,
-                              @RequestParam String ticker,
-                              @RequestParam String market,
-                              @RequestParam String sector,
-                              @RequestParam String dividendCycle) {
-        Stock stock = stockRepository.findById(id).orElseThrow();
-        stock.setStockName(stockName);
-        stock.setTicker(ticker);
-        stock.setMarket(market);
-        stock.setSector(sector);
-        stock.setDividendCycle(dividendCycle);
-        stockRepository.save(stock);
-        return "redirect:/stocks";
+    // 종목 수정
+    @PatchMapping("/{id}")
+    public ApiResponse<Stock> update(@PathVariable Long id, @RequestBody Map<String, Object> req) {
+        try {
+            return ApiResponse.ok(stockService.update(id, req));
+        } catch (NoSuchElementException e) {
+            return ApiResponse.error(e.getMessage(), "STOCK_NOT_FOUND");
+        }
     }
 
-    @GetMapping("/stocks/delete/{id}")
-    public String deleteStock(@PathVariable Long id) {
-        stockRepository.deleteById(id);
-        return "redirect:/stocks";
+    // 종목 삭제
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        try {
+            stockService.delete(id);
+            return ApiResponse.ok(null, "종목이 삭제되었습니다");
+        } catch (NoSuchElementException e) {
+            return ApiResponse.error(e.getMessage(), "STOCK_NOT_FOUND");
+        }
+    }
+
+    // 종목명·코드 검색
+    @GetMapping("/search")
+    public ApiResponse<List<Stock>> search(@RequestParam String keyword) {
+        return ApiResponse.ok(stockService.search(keyword));
+    }
+
+    // 섹터 정보 등록·수정
+    @PatchMapping("/{id}/sector")
+    public ApiResponse<Stock> updateSector(@PathVariable Long id, @RequestBody Map<String, Object> req) {
+        try {
+            String sector = req.get("sector").toString();
+            return ApiResponse.ok(stockService.updateSector(id, sector));
+        } catch (NoSuchElementException e) {
+            return ApiResponse.error(e.getMessage(), "STOCK_NOT_FOUND");
+        }
     }
 }

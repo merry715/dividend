@@ -1,8 +1,15 @@
 package com.example.dividend.controller;
 
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+import java.util.Map;
+
+@RestController
 public class HomeController {
 
+    @GetMapping("/api/v1/health")
+    public Map<String, String> health() {
+        return Map.of("status", "ok");
+    }
 }

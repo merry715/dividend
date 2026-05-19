@@ -9,15 +9,29 @@ public class Stock {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String stockName;
-    private String ticker;
-    private String market;
-    private String sector;
-    private String dividendCycle;
+    @Column(nullable = false)
+    private Long userId;
 
-    // getter, setter
+    @Column(nullable = false)
+    private String stockName;
+
+    @Column(nullable = false, unique = true)
+    private String stockCode;
+
+    private String sector;
+
+    private int lastClosePrice;
+
     public Long getId() {
         return id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getStockName() {
@@ -28,20 +42,12 @@ public class Stock {
         this.stockName = stockName;
     }
 
-    public String getTicker() {
-        return ticker;
+    public String getStockCode() {
+        return stockCode;
     }
 
-    public void setTicker(String ticker) {
-        this.ticker = ticker;
-    }
-
-    public String getMarket() {
-        return market;
-    }
-
-    public void setMarket(String market) {
-        this.market = market;
+    public void setStockCode(String stockCode) {
+        this.stockCode = stockCode;
     }
 
     public String getSector() {
@@ -52,11 +58,11 @@ public class Stock {
         this.sector = sector;
     }
 
-    public String getDividendCycle() {
-        return dividendCycle;
+    public int getLastClosePrice() {
+        return lastClosePrice;
     }
 
-    public void setDividendCycle(String dividendCycle) {
-        this.dividendCycle = dividendCycle;
+    public void setLastClosePrice(int lastClosePrice) {
+        this.lastClosePrice = lastClosePrice;
     }
 }

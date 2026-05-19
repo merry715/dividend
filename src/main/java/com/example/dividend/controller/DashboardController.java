@@ -4,11 +4,15 @@ import com.example.dividend.entity.Goal;
 import com.example.dividend.repository.GoalRepository;
 import com.example.dividend.repository.TransactionRepository;
 import com.example.dividend.service.DashboardService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/dashboard")
 public class DashboardController {
 
     private final TransactionRepository transactionRepository;
@@ -23,9 +27,8 @@ public class DashboardController {
         this.goalRepository = goalRepository;
     }
 
-    @GetMapping("/")
-    public String dashboard(Model model) {
-
+    @GetMapping
+    public Map<String, Object> dashboard() {
         int totalInvestment = transactionRepository.findAll().stream()
                 .mapToInt(t -> t.getQuantity() * t.getPrice())
                 .sum();
@@ -46,13 +49,14 @@ public class DashboardController {
             achievementRate = (double) totalDividend / targetDividend * 100;
         }
 
-        model.addAttribute("totalInvestment", totalInvestment);
-        model.addAttribute("holdings", holdings);
-        model.addAttribute("totalDividend", totalDividend);
-        model.addAttribute("targetDividend", targetDividend);
-        model.addAttribute("achievementRate", String.format("%.1f", achievementRate));
-        model.addAttribute("monthlyDividends", dashboardService.getMonthlyDividends());
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalInvestment", totalInvestment);
+        response.put("holdings", holdings);
+        response.put("totalDividend", totalDividend);
+        response.put("targetDividend", targetDividend);
+        response.put("achievementRate", String.format("%.1f", achievementRate));
+        response.put("monthlyDividends", dashboardService.getMonthlyDividends());
 
-        return "dashboard";
+        return response;
     }
 }

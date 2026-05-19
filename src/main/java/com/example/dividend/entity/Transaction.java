@@ -10,34 +10,36 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private LocalDate tradeDate;
-    private String tradeType;
+    @Column(nullable = false)
+    private Long stockId;
+
+    @Column(nullable = false)
+    private String type;   // BUY / SELL
+
     private int quantity;
     private int price;
-    private int fee;
-
-    @ManyToOne
-    @JoinColumn(name = "stock_id")
-    private Stock stock;
+    private LocalDate date;
+    private int brokerFee;
+    private int transactionTax;
 
     public Long getId() {
         return id;
     }
 
-    public LocalDate getTradeDate() {
-        return tradeDate;
+    public Long getStockId() {
+        return stockId;
     }
 
-    public void setTradeDate(LocalDate tradeDate) {
-        this.tradeDate = tradeDate;
+    public void setStockId(Long stockId) {
+        this.stockId = stockId;
     }
 
-    public String getTradeType() {
-        return tradeType;
+    public String getType() {
+        return type;
     }
 
-    public void setTradeType(String tradeType) {
-        this.tradeType = tradeType;
+    public void setType(String type) {
+        this.type = type;
     }
 
     public int getQuantity() {
@@ -56,19 +58,27 @@ public class Transaction {
         this.price = price;
     }
 
-    public int getFee() {
-        return fee;
+    public LocalDate getDate() {
+        return date;
     }
 
-    public void setFee(int fee) {
-        this.fee = fee;
+    public void setDate(LocalDate date) {
+        this.date = date;
     }
 
-    public Stock getStock() {
-        return stock;
+    public int getBrokerFee() {
+        return brokerFee;
     }
 
-    public void setStock(Stock stock) {
-        this.stock = stock;
+    public void setBrokerFee(int brokerFee) {
+        this.brokerFee = brokerFee;
+    }
+
+    public int getTransactionTax() {
+        return transactionTax;
+    }
+
+    public void setTransactionTax(int transactionTax) {
+        this.transactionTax = transactionTax;
     }
 }

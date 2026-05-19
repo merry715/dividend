@@ -16,36 +16,53 @@
 |------|------|
 | Backend | Spring Boot 4.0, Java 17 |
 | ORM | Spring Data JPA |
-| Database | H2 (파일 기반) |
-| Template | Thymeleaf |
+| Database | MySQL |
+| Security | Spring Security + JWT |
+| Frontend | React |
 | Chart | Chart.js |
+
+## 환경 변수
+
+| 변수명 | 설명 | 기본값 |
+|--------|------|--------|
+| `DB_URL` | MySQL JDBC URL | `jdbc:mysql://localhost:3306/dividend?...` |
+| `DB_USERNAME` | DB 사용자명 | `root` |
+| `DB_PASSWORD` | DB 비밀번호 | (없음) |
+| `JWT_SECRET` | JWT 서명 키 (32자 이상) | 개발용 기본값 |
 
 ## 실행 방법
 
-**JDK 17 이상 필요**
+**JDK 17 이상, MySQL 서버 필요**
 
 ```bash
-# 실행
-./gradlew bootRun
+# MySQL에 dividend 데이터베이스 생성
+CREATE DATABASE dividend CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# 환경 변수 설정 후 실행
+DB_USERNAME=root DB_PASSWORD=yourpassword ./gradlew bootRun
 ```
 
-실행 후 브라우저에서 `http://localhost:8080` 접속
+## API 엔드포인트
 
-## H2 콘솔
-
-`http://localhost:8080/h2-console`
-
-- JDBC URL: `jdbc:h2:file:./data/dividend`
-- User Name: `sa`
-- Password: (없음)
+| Method | URL | 설명 |
+|--------|-----|------|
+| GET | `/api/health` | 서버 상태 확인 |
+| GET | `/api/dashboard` | 대시보드 데이터 |
+| GET/POST/PUT/DELETE | `/api/stocks` | 종목 관리 |
+| GET/POST/PUT/DELETE | `/api/transactions` | 거래 관리 |
+| GET/POST/PUT/DELETE | `/api/dividends` | 배당 정보 관리 |
+| GET | `/api/analysis` | 배당 분석 |
+| POST | `/api/analysis/goal` | 목표 설정 |
 
 ## 프로젝트 구조
 
 ```
 src/main/java/com/example/dividend/
-├── controller/   # 웹 요청 처리
+├── config/       # Security 설정
+├── controller/   # REST API 컨트롤러
 ├── entity/       # DB 엔티티 (Stock, Transaction, Dividend, Goal)
 ├── repository/   # JPA Repository
 ├── service/      # 비즈니스 로직 (보유 수량, 배당금 계산)
+├── util/         # JWT 유틸리티
 └── dto/          # 데이터 전달 객체
 ```

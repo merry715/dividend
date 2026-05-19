@@ -3,7 +3,7 @@ package com.example.dividend.entity;
 import jakarta.persistence.*;
 
 @Entity
-public class Goal {
+public class SectorTarget {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -13,9 +13,9 @@ public class Goal {
     private Long userId;
 
     @Column(nullable = false)
-    private int year;
+    private String sectorName;
 
-    private int targetDividend;
+    private int targetRate;
 
     public Long getId() {
         return id;
@@ -29,19 +29,19 @@ public class Goal {
         this.userId = userId;
     }
 
-    public int getYear() {
-        return year;
+    public String getSectorName() {
+        return sectorName;
     }
 
-    public void setYear(int year) {
-        this.year = year;
+    public void setSectorName(String sectorName) {
+        this.sectorName = sectorName;
     }
 
-    public int getTargetDividend() {
-        return targetDividend;
+    public int getTargetRate() {
+        return targetRate;
     }
 
-    public void setTargetDividend(int targetDividend) {
-        this.targetDividend = targetDividend;
+    public void setTargetRate(int targetRate) {
+        this.targetRate = targetRate;
     }
 }
