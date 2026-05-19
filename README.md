@@ -49,13 +49,13 @@ DB_USERNAME=root DB_PASSWORD=yourpassword ./gradlew bootRun
 
 | Method | URL | 설명 |
 |--------|-----|------|
-| GET | `/api/health` | 서버 상태 확인 |
-| GET | `/api/dashboard` | 대시보드 데이터 |
-| GET/POST/PUT/DELETE | `/api/stocks` | 종목 관리 |
-| GET/POST/PUT/DELETE | `/api/transactions` | 거래 관리 |
-| GET/POST/PUT/DELETE | `/api/dividends` | 배당 정보 관리 |
-| GET | `/api/analysis` | 배당 분석 |
-| POST | `/api/analysis/goal` | 목표 설정 |
+| GET | `/api/v1/health` | 서버 상태 확인 |
+| GET | `/api/v1/dashboard` | 대시보드 데이터 |
+| GET/POST/PUT/DELETE | `/api/v1/stocks` | 종목 관리 |
+| GET/POST/PUT/DELETE | `/api/v1/transactions` | 거래 관리 |
+| GET/POST/PUT/DELETE | `/api/v1/dividends` | 배당 정보 관리 |
+| GET | `/api/v1/analysis` | 배당 분석 |
+| POST | `/api/v1/analysis/goal` | 목표 설정 |
 
 ## GitHub 브랜치 전략
 
