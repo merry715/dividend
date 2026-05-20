@@ -15,3 +15,10 @@ spring:
 jwt:
   secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production}
   expiration: 86400000
+
+stock:
+  search:
+    python-server-url: ${STOCK_SEARCH_URL:http://localhost:5000}
+    timeout-seconds: 3
+  schedule:
+    price-update-cron: ${PRICE_UPDATE_CRON:0 0 18 * * *}
