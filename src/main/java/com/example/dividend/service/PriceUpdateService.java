@@ -34,8 +34,7 @@ public class PriceUpdateService {
         int skipped = 0;
 
         for (Stock stock : stocks) {
-            String ticker = toTicker(stock);
-            BigDecimal price = pythonServerClient.fetchPrice(ticker);
+            BigDecimal price = fetchPriceWithFallback(stock);
 
             if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
                 stock.setPreviousClose(price);
@@ -50,16 +49,33 @@ public class PriceUpdateService {
     }
 
     /**
-     * KRX 종목: exchange 값으로 KOSPI(.KS) / KOSDAQ(.KQ) 구분.
-     * 기본(KRX, null 등)은 KOSPI 접미사 적용.
+     * KRX 종목 전용: exchange 값으로 KOSPI(.KS) / KOSDAQ(.KQ) 구분.
+     * exchange가 KOSDAQ이면 .KQ, 나머지(KOSPI·KRX·미설정)는 .KS 적용.
      */
     private String toTicker(Stock stock) {
         String code = stock.getStockCode();
         String exchange = stock.getExchange() != null ? stock.getExchange().toUpperCase() : "";
-        return switch (exchange) {
-            case "KOSDAQ" -> code + ".KQ";
-            case "KRX", "KOSPI", "" -> code + ".KS";
-            default -> code; // NASDAQ, NYSE 등 해외 종목
-        };
+        return "KOSDAQ".equals(exchange) ? code + ".KQ" : code + ".KS";
+    }
+
+    /**
+     * exchange 미확인 종목의 경우: .KS로 조회 실패 시 .KQ로 재시도.
+     */
+    private BigDecimal fetchPriceWithFallback(Stock stock) {
+        String code = stock.getStockCode();
+        String exchange = stock.getExchange() != null ? stock.getExchange().toUpperCase() : "";
+
+        // exchange가 명확하면 단순 조회
+        if ("KOSDAQ".equals(exchange) || "KOSPI".equals(exchange) || "KRX".equals(exchange)) {
+            return pythonServerClient.fetchPrice(toTicker(stock));
+        }
+
+        // exchange 미설정: .KS 먼저 시도, 실패 시 .KQ 재시도
+        BigDecimal price = pythonServerClient.fetchPrice(code + ".KS");
+        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+            log.info("KOSPI 조회 실패, KOSDAQ으로 재시도 [code={}]", code);
+            price = pythonServerClient.fetchPrice(code + ".KQ");
+        }
+        return price;
     }
 }

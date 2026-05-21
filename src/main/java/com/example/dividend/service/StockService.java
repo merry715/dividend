@@ -77,8 +77,8 @@ public class StockService {
         stock.setStockName(req.getStockName().trim());
         stock.setStockCode(stockCode);
         stock.setSector(req.getSector());
-        stock.setExchange(req.getExchange() != null ? req.getExchange().toUpperCase() : "KRX");
-        stock.setCurrency(req.getCurrency() != null ? req.getCurrency().toUpperCase() : "KRW");
+        stock.setExchange(req.getExchange() != null ? req.getExchange().toUpperCase() : "KOSPI");
+        stock.setCurrency("KRW"); // KRX 전용: 통화는 항상 KRW
         stock.setQuantity(req.getQuantity() != null ? req.getQuantity() : 0);
         stock.setAvgPrice(req.getAvgPrice() != null ? req.getAvgPrice() : BigDecimal.ZERO);
         stock.setDividendCycle(req.getDividendCycle());
@@ -96,7 +96,6 @@ public class StockService {
         if (req.getStockName()               != null) stock.setStockName(req.getStockName().trim());
         if (req.getSector()                  != null) stock.setSector(req.getSector());
         if (req.getExchange()                != null) stock.setExchange(req.getExchange().toUpperCase());
-        if (req.getCurrency()                != null) stock.setCurrency(req.getCurrency().toUpperCase());
         if (req.getQuantity()                != null) stock.setQuantity(req.getQuantity());
         if (req.getAvgPrice()                != null) stock.setAvgPrice(req.getAvgPrice());
         if (req.getDividendCycle()           != null) stock.setDividendCycle(req.getDividendCycle());

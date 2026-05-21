@@ -1,5 +1,7 @@
 package com.example.dividend.service;
 
+import com.example.dividend.dto.request.DividendConfirmRequest;
+import com.example.dividend.dto.request.DividendGenerateRequest;
 import com.example.dividend.entity.Dividend;
 import com.example.dividend.repository.DividendRepository;
 import org.springframework.stereotype.Service;
@@ -20,24 +22,22 @@ public class DividendService {
         return dividendRepository.findAll();
     }
 
-    public List<Dividend> generate(Map<String, Object> req) {
+    public List<Dividend> generate(DividendGenerateRequest req) {
         // TODO: 보유 종목 기반 예상 배당 자동 생성
-        // 1. req에서 year 추출
+        // 1. req.getYear() 로 연도 사용
         // 2. HoldingStock 조회
         // 3. 종목별 직전 연도 배당 이력 기반으로 expectedDividend 추정
         // 4. Dividend 레코드 생성 (status = EXPECTED) 후 저장
         return List.of();
     }
 
-    public Dividend confirm(Long id, Map<String, Object> req) {
+    public Dividend confirm(Long id, DividendConfirmRequest req) {
         Dividend dividend = dividendRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("배당 정보를 찾을 수 없습니다: " + id));
 
         dividend.setStatus("CONFIRMED");
-        if (req.containsKey("confirmedDividend"))
-            dividend.setConfirmedDividend(Integer.parseInt(req.get("confirmedDividend").toString()));
-        if (req.containsKey("paymentDate"))
-            dividend.setPaymentDate(LocalDate.parse(req.get("paymentDate").toString()));
+        dividend.setConfirmedDividend(req.getConfirmedDividend());
+        dividend.setPaymentDate(req.getPaymentDate());
 
         return dividendRepository.save(dividend);
     }

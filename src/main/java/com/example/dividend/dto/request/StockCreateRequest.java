@@ -3,6 +3,7 @@ package com.example.dividend.dto.request;
 import com.example.dividend.entity.StockSector;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -19,16 +20,13 @@ public class StockCreateRequest {
     private String stockName;
 
     @NotBlank(message = "종목 코드는 필수입니다")
-    @Size(max = 20, message = "종목 코드는 20자 이하여야 합니다")
+    @Pattern(regexp = "^[0-9]{6}$", message = "종목 코드는 6자리 숫자여야 합니다 (예: 005930)")
     private String stockCode;
 
     private StockSector sector;
 
-    @Size(max = 20, message = "거래소는 20자 이하여야 합니다")
+    @Pattern(regexp = "^(KOSPI|KRX|KOSDAQ)$", message = "거래소는 KOSPI(KRX) 또는 KOSDAQ만 허용됩니다")
     private String exchange;
-
-    @Size(max = 5, message = "통화 코드는 5자 이하여야 합니다")
-    private String currency;
 
     @PositiveOrZero(message = "보유 수량은 0 이상이어야 합니다")
     private Integer quantity;
@@ -37,6 +35,8 @@ public class StockCreateRequest {
     private BigDecimal avgPrice;
 
     /** 배당 주기 — ANNUAL / QUARTERLY / MONTHLY */
+    @Pattern(regexp = "^(ANNUAL|QUARTERLY|MONTHLY)$",
+             message = "배당 주기는 ANNUAL, QUARTERLY, MONTHLY 중 하나여야 합니다")
     private String dividendCycle;
 
     /** 주당 예상 배당금 */

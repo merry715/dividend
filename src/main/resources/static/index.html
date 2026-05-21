@@ -148,10 +148,8 @@
         <div>
           <label>거래소</label>
           <select id="s-exchange">
-            <option value="KRX">KRX (KOSPI)</option>
-            <option value="KOSDAQ">KOSDAQ</option>
-            <option value="NASDAQ">NASDAQ</option>
-            <option value="NYSE">NYSE</option>
+            <option value="KOSPI">KOSPI (코스피)</option>
+            <option value="KOSDAQ">KOSDAQ (코스닥)</option>
           </select>
         </div>
         <div>
@@ -431,11 +429,11 @@ async function updateStock() {
     if (!item) return;
     nameInput.value = item.stockName;
     document.getElementById('s-code').value = item.stockCode || '';
-    // 거래소 select 매핑
-    const exMap = { KOSPI: 'KRX', KRX: 'KRX', KOSDAQ: 'KOSDAQ', NASDAQ: 'NASDAQ', NYSE: 'NYSE' };
+    // 거래소 select 매핑 (KRX 종목만 지원)
+    const exMap = { KOSPI: 'KOSPI', KRX: 'KOSPI', KOSDAQ: 'KOSDAQ' };
     const exSel = document.getElementById('s-exchange');
-    const mapped = exMap[item.exchange] || item.exchange || '';
-    if (mapped) exSel.value = mapped;
+    const mapped = exMap[item.exchange] || 'KOSPI';
+    exSel.value = mapped;
     closeDropdown();
     // 다음 필드(섹터)로 포커스 이동
     document.getElementById('s-sector').focus();

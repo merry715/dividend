@@ -2,6 +2,7 @@ package com.example.dividend.dto.request;
 
 import com.example.dividend.entity.StockSector;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -18,11 +19,8 @@ public class StockUpdateRequest {
 
     private StockSector sector;
 
-    @Size(max = 20, message = "거래소는 20자 이하여야 합니다")
+    @Pattern(regexp = "^(KOSPI|KRX|KOSDAQ)$", message = "거래소는 KOSPI(KRX) 또는 KOSDAQ만 허용됩니다")
     private String exchange;
-
-    @Size(max = 5, message = "통화 코드는 5자 이하여야 합니다")
-    private String currency;
 
     @PositiveOrZero(message = "보유 수량은 0 이상이어야 합니다")
     private Integer quantity;
@@ -31,6 +29,8 @@ public class StockUpdateRequest {
     private BigDecimal avgPrice;
 
     /** 배당 주기 — ANNUAL / QUARTERLY / MONTHLY */
+    @Pattern(regexp = "^(ANNUAL|QUARTERLY|MONTHLY)$",
+             message = "배당 주기는 ANNUAL, QUARTERLY, MONTHLY 중 하나여야 합니다")
     private String dividendCycle;
 
     /** 주당 예상 배당금 */
