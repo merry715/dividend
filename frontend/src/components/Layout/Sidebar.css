@@ -1,0 +1,308 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #1D9E75;
+  display: flex;
+  flex-direction: column;
+  position: relative;   /* fixed → relative: flex 흐름에 편입 */
+  flex-shrink: 0;
+  font-family: 'Outfit', sans-serif;
+  z-index: 100;
+  overflow: hidden;
+  transition: width 0.25s ease;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+/* ── 토글 버튼 ── */
+.sidebar__toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #1D9E75;
+  color: #1D9E75;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 101;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.14);
+  transition: background 0.15s ease;
+  padding: 0;
+}
+
+.sidebar__toggle:hover {
+  background: #E1F5EE;
+}
+
+/* ── 브랜드 ── */
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar__brand {
+  justify-content: center;
+  padding: 20px 0;
+  gap: 0;
+}
+
+.sidebar__logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar__logo {
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar__brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 160px;
+  transition: opacity 0.2s ease, max-width 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar__brand-name {
+  opacity: 0;
+  max-width: 0;
+}
+
+/* ── 내비게이션 ── */
+.sidebar__nav {
+  flex: 1;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar__nav {
+  padding: 16px 6px;
+}
+
+.sidebar__nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 8px 10px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.15s ease, height 0.25s ease, padding 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar__nav-label {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  position: relative;
+  transition: color 0.15s ease, background 0.15s ease, padding 0.25s ease, justify-content 0.25s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar__item {
+  justify-content: center;
+  padding: 12px 0;
+  gap: 0;
+}
+
+.sidebar__item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sidebar__item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.sidebar__item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: #fff;
+  border-radius: 0 3px 3px 0;
+}
+
+.sidebar__item-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar__item.active .sidebar__item-icon,
+.sidebar__item:hover .sidebar__item-icon {
+  opacity: 1;
+}
+
+.sidebar__item-label {
+  overflow: hidden;
+  max-width: 160px;
+  transition: opacity 0.2s ease, max-width 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar__item-label {
+  opacity: 0;
+  max-width: 0;
+}
+
+/* ── 푸터 ── */
+.sidebar__footer {
+  padding: 12px 10px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar__footer {
+  padding: 12px 6px 16px;
+}
+
+.sidebar__tip-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, padding 0.25s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar__tip-btn {
+  justify-content: center;
+  padding: 10px 0;
+  pointer-events: none;
+  background: transparent;
+  border-color: transparent;
+}
+
+.sidebar__tip-btn:hover,
+.sidebar__tip-btn.open {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.sidebar.collapsed .sidebar__tip-btn:hover {
+  background: transparent;
+}
+
+.sidebar__tip-label,
+.sidebar__tip-arrow {
+  overflow: hidden;
+  max-width: 160px;
+  transition: opacity 0.2s ease, max-width 0.25s ease;
+}
+
+.sidebar.collapsed .sidebar__tip-label,
+.sidebar.collapsed .sidebar__tip-arrow {
+  opacity: 0;
+  max-width: 0;
+}
+
+.sidebar__tip-arrow {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* ── 팁 팝오버 ── */
+.sidebar__tips-popover {
+  position: fixed;
+  left: 252px;
+  bottom: 16px;
+  width: 288px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  padding: 16px;
+  z-index: 200;
+}
+
+.sidebar__tips-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1D9E75;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.sidebar__tip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.sidebar__tip-item:first-child { padding-top: 0; }
+.sidebar__tip-item:last-child  { border-bottom: none; padding-bottom: 0; }
+
+.sidebar__tip-term {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+}
+
+.sidebar__tip-desc {
+  font-size: 11px;
+  color: #777;
+  line-height: 1.5;
+}
