@@ -4,7 +4,9 @@ import com.example.dividend.dto.ApiResponse;
 import com.example.dividend.dto.LoginRequest;
 import com.example.dividend.dto.SignupRequest;
 import com.example.dividend.dto.TokenResponse;
+import com.example.dividend.dto.UserResponse;
 import com.example.dividend.service.AuthService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -44,6 +46,12 @@ public class AuthController {
     public ApiResponse<Void> logout(@RequestBody Map<String, String> req) {
         authService.logout(req.get("refreshToken"));
         return ApiResponse.ok(null, "로그아웃 되었습니다");
+    }
+
+    // 내 정보 조회
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> me(@AuthenticationPrincipal String email) {
+        return ApiResponse.ok(authService.getMe(email), "사용자 정보 조회 성공");
     }
 
     // Access Token 재발급

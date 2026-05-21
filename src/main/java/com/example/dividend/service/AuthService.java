@@ -3,6 +3,7 @@ package com.example.dividend.service;
 import com.example.dividend.dto.LoginRequest;
 import com.example.dividend.dto.SignupRequest;
 import com.example.dividend.dto.TokenResponse;
+import com.example.dividend.dto.UserResponse;
 import com.example.dividend.entity.RefreshToken;
 import com.example.dividend.entity.User;
 import com.example.dividend.repository.RefreshTokenRepository;
@@ -77,6 +78,13 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
         refreshTokenRepository.delete(stored);
         return issueTokens(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getMe(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+        return new UserResponse(user.getId(), user.getEmail(), user.getName(), user.getRole());
     }
 
     private TokenResponse issueTokens(User user) {
