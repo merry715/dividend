@@ -73,6 +73,18 @@ public class TransactionController {
         return ApiResponse.ok(transactionService.getSummary());
     }
 
+    // 전체 종목 보유 현황 (수량 + 평균 단가)
+    @GetMapping("/holdings")
+    public ApiResponse<List<Map<String, Object>>> getAllHoldings() {
+        return ApiResponse.ok(transactionService.getAllHoldings());
+    }
+
+    // 특정 종목 보유 현황
+    @GetMapping("/stocks/{stockId}/holdings")
+    public ApiResponse<Map<String, Object>> getStockHolding(@PathVariable Long stockId) {
+        return ApiResponse.ok(transactionService.getStockHolding(stockId));
+    }
+
     // 월별 매수/매도 추이
     @GetMapping("/chart")
     public ApiResponse<Map<String, Object>> getChart(@RequestParam int year) {
