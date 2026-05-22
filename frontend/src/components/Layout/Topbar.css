@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+.topbar {
+  height: 52px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #ebebeb;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 24px;
+  background: #fff;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ── 유저 영역 ── */
+.topbar__user-wrap {
+  position: relative;
+}
+
+.topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  transition: background 0.12s;
+}
+
+.topbar__user:hover {
+  background: #f5f5f5;
+}
+
+.topbar__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9FE1CB, #1D9E75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* ── 팝업 ── */
+.topbar__popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 180px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar__popup-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9FE1CB, #1D9E75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.topbar__popup-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.topbar__popup-role {
+  font-size: 11px;
+  color: #999;
+  font-weight: 500;
+}
+
+/* ── 로그아웃 ── */
+.topbar__logout {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.topbar__logout:hover {
+  border-color: #1D9E75;
+  color: #1D9E75;
+}
