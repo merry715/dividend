@@ -1,8 +1,14 @@
 package com.example.dividend.controller;
 
+import com.example.dividend.dto.ApiResponse;
+import com.example.dividend.dto.request.GoalCreateRequest;
 import com.example.dividend.entity.Goal;
 import com.example.dividend.repository.GoalRepository;
 import com.example.dividend.service.DashboardService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -10,16 +16,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/analysis")
+@RequiredArgsConstructor
 public class AnalysisController {
 
     private final GoalRepository goalRepository;
     private final DashboardService dashboardService;
-
-    public AnalysisController(GoalRepository goalRepository,
-                              DashboardService dashboardService) {
-        this.goalRepository = goalRepository;
-        this.dashboardService = dashboardService;
-    }
 
     @GetMapping
     public Map<String, Object> analysis() {
@@ -46,9 +47,11 @@ public class AnalysisController {
     }
 
     @PostMapping("/goal")
-    public Goal saveGoal(@RequestBody Map<String, Object> req) {
+    public ResponseEntity<ApiResponse<Goal>> saveGoal(
+            @RequestBody @Valid GoalCreateRequest request) {
         Goal goal = new Goal();
-        goal.setTargetDividend(Integer.parseInt(req.get("targetDividend").toString()));
-        return goalRepository.save(goal);
+        goal.setTargetDividend(request.getTargetDividend());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(goalRepository.save(goal), "목표가 저장되었습니다"));
     }
 }
