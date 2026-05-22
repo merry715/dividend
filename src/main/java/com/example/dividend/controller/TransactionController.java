@@ -1,8 +1,14 @@
 package com.example.dividend.controller;
 
 import com.example.dividend.dto.ApiResponse;
+import com.example.dividend.dto.request.TransactionCreateRequest;
+import com.example.dividend.dto.request.TransactionUpdateRequest;
 import com.example.dividend.entity.Transaction;
 import com.example.dividend.service.TransactionService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,13 +17,10 @@ import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/v1/transactions")
+@RequiredArgsConstructor
 public class TransactionController {
 
     private final TransactionService transactionService;
-
-    public TransactionController(TransactionService transactionService) {
-        this.transactionService = transactionService;
-    }
 
     // 전체 거래 내역 조회 (연도·유형 필터)
     @GetMapping
@@ -29,30 +32,32 @@ public class TransactionController {
 
     // 거래 입력
     @PostMapping
-    public ApiResponse<Transaction> add(@RequestBody Map<String, Object> req) {
-        return ApiResponse.ok(transactionService.add(req), "거래가 등록되었습니다");
+    public ResponseEntity<ApiResponse<Transaction>> add(
+            @RequestBody @Valid TransactionCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(transactionService.add(request), "거래가 등록되었습니다"));
     }
 
     // 거래 수정
     @PatchMapping("/{transactionId}")
-    public ApiResponse<Transaction> update(
+    public ResponseEntity<ApiResponse<Transaction>> update(
             @PathVariable Long transactionId,
-            @RequestBody Map<String, Object> req) {
+            @RequestBody @Valid TransactionUpdateRequest request) {
         try {
-            return ApiResponse.ok(transactionService.update(transactionId, req));
+            return ResponseEntity.ok(ApiResponse.ok(transactionService.update(transactionId, request)));
         } catch (NoSuchElementException e) {
-            return ApiResponse.error(e.getMessage(), "TRANSACTION_NOT_FOUND");
+            return ResponseEntity.ok(ApiResponse.error(e.getMessage(), "TRANSACTION_NOT_FOUND"));
         }
     }
 
     // 거래 삭제
     @DeleteMapping("/{transactionId}")
-    public ApiResponse<Void> delete(@PathVariable Long transactionId) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long transactionId) {
         try {
             transactionService.delete(transactionId);
-            return ApiResponse.ok(null, "거래가 삭제되었습니다");
+            return ResponseEntity.ok(ApiResponse.ok(null, "거래가 삭제되었습니다"));
         } catch (NoSuchElementException e) {
-            return ApiResponse.error(e.getMessage(), "TRANSACTION_NOT_FOUND");
+            return ResponseEntity.ok(ApiResponse.error(e.getMessage(), "TRANSACTION_NOT_FOUND"));
         }
     }
 

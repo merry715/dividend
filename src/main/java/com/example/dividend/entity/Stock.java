@@ -1,68 +1,66 @@
 package com.example.dividend.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
+
+import java.math.BigDecimal;
 
 @Entity
-public class Stock {
+@Table(
+    name = "stock",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_stock_user_code",
+        columnNames = {"user_id", "stock_code"}
+    )
+)
+@SQLRestriction("deleted_at IS NULL")
+@Getter
+@Setter
+@NoArgsConstructor
+public class Stock extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(nullable = false)
+    @Column(name = "stock_name", nullable = false, length = 100)
     private String stockName;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "stock_code", nullable = false, length = 20)
     private String stockCode;
 
-    private String sector;
+    // DB에 enum name(영문)을 VARCHAR로 저장
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private StockSector sector;
 
-    private int lastClosePrice;
+    @Column(length = 20)
+    private String exchange;
 
-    public Long getId() {
-        return id;
-    }
+    @Column(length = 5)
+    private String currency;
 
-    public Long getUserId() {
-        return userId;
-    }
+    @Column(nullable = false)
+    private int quantity = 0;
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    @Column(name = "avg_price", precision = 18, scale = 4)
+    private BigDecimal avgPrice = BigDecimal.ZERO;
 
-    public String getStockName() {
-        return stockName;
-    }
+    @Column(name = "previous_close", precision = 18, scale = 4)
+    private BigDecimal previousClose = BigDecimal.ZERO;
 
-    public void setStockName(String stockName) {
-        this.stockName = stockName;
-    }
+    /** 배당 주기: ANNUAL / QUARTERLY / MONTHLY */
+    @Column(name = "dividend_cycle", length = 20)
+    private String dividendCycle;
 
-    public String getStockCode() {
-        return stockCode;
-    }
-
-    public void setStockCode(String stockCode) {
-        this.stockCode = stockCode;
-    }
-
-    public String getSector() {
-        return sector;
-    }
-
-    public void setSector(String sector) {
-        this.sector = sector;
-    }
-
-    public int getLastClosePrice() {
-        return lastClosePrice;
-    }
-
-    public void setLastClosePrice(int lastClosePrice) {
-        this.lastClosePrice = lastClosePrice;
-    }
+    /** 주당 예상 배당금 */
+    @Column(name = "expected_dividend_per_share")
+    private Integer expectedDividendPerShare;
 }
