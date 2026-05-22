@@ -1,10 +1,11 @@
 package com.example.dividend.service;
 
+import com.example.dividend.dto.request.TransactionCreateRequest;
+import com.example.dividend.dto.request.TransactionUpdateRequest;
 import com.example.dividend.entity.Transaction;
 import com.example.dividend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -30,29 +31,28 @@ public class TransactionService {
         return transactionRepository.findAll();
     }
 
-    public Transaction add(Map<String, Object> req) {
+    public Transaction add(TransactionCreateRequest req) {
         Transaction t = new Transaction();
-        t.setStockId(Long.valueOf(req.get("stockId").toString()));
-        t.setType(req.get("type").toString().toUpperCase());
-        t.setQuantity(Integer.parseInt(req.get("quantity").toString()));
-        t.setPrice(Integer.parseInt(req.get("price").toString()));
-        t.setDate(LocalDate.parse(req.get("date").toString()));
-        t.setBrokerFee(Integer.parseInt(req.getOrDefault("brokerFee", "0").toString()));
-        t.setTransactionTax(Integer.parseInt(req.getOrDefault("transactionTax", "0").toString()));
+        t.setStockId(req.getStockId());
+        t.setType(req.getType());
+        t.setQuantity(req.getQuantity());
+        t.setPrice(req.getPrice());
+        t.setDate(req.getDate());
+        t.setBrokerFee(req.getBrokerFee());
+        t.setTransactionTax(req.getTransactionTax());
         return transactionRepository.save(t);
     }
 
-    public Transaction update(Long id, Map<String, Object> req) {
+    public Transaction update(Long id, TransactionUpdateRequest req) {
         Transaction t = transactionRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("거래를 찾을 수 없습니다: " + id));
 
-        if (req.containsKey("stockId"))        t.setStockId(Long.valueOf(req.get("stockId").toString()));
-        if (req.containsKey("type"))           t.setType(req.get("type").toString().toUpperCase());
-        if (req.containsKey("quantity"))       t.setQuantity(Integer.parseInt(req.get("quantity").toString()));
-        if (req.containsKey("price"))          t.setPrice(Integer.parseInt(req.get("price").toString()));
-        if (req.containsKey("date"))           t.setDate(LocalDate.parse(req.get("date").toString()));
-        if (req.containsKey("brokerFee"))      t.setBrokerFee(Integer.parseInt(req.get("brokerFee").toString()));
-        if (req.containsKey("transactionTax")) t.setTransactionTax(Integer.parseInt(req.get("transactionTax").toString()));
+        if (req.getType()           != null) t.setType(req.getType());
+        if (req.getQuantity()       != null) t.setQuantity(req.getQuantity());
+        if (req.getPrice()          != null) t.setPrice(req.getPrice());
+        if (req.getDate()           != null) t.setDate(req.getDate());
+        if (req.getBrokerFee()      != null) t.setBrokerFee(req.getBrokerFee());
+        if (req.getTransactionTax() != null) t.setTransactionTax(req.getTransactionTax());
 
         return transactionRepository.save(t);
     }
