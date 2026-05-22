@@ -1,54 +1,66 @@
 package com.example.dividend.controller;
 
 import com.example.dividend.dto.ApiResponse;
-import com.example.dividend.dto.request.LoginRequest;
-import com.example.dividend.dto.request.RegisterRequest;
-import com.example.dividend.dto.response.AuthResponse;
+import com.example.dividend.dto.LoginRequest;
+import com.example.dividend.dto.SignupRequest;
+import com.example.dividend.dto.TokenResponse;
+import com.example.dividend.dto.UserResponse;
 import com.example.dividend.service.AuthService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.ObjectError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.stream.Collectors;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
-@RequiredArgsConstructor
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(
-            @RequestBody @Valid RegisterRequest request) {
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    // 회원가입
+    @PostMapping("/signup")
+    public ApiResponse<TokenResponse> signup(@RequestBody SignupRequest req) {
         try {
-            return ResponseEntity.ok(ApiResponse.ok(authService.register(request), "회원가입이 완료되었습니다"));
+            return ApiResponse.ok(authService.signup(req), "회원가입이 완료되었습니다");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage(), "DUPLICATE_EMAIL"));
+            return ApiResponse.error(e.getMessage(), "SIGNUP_FAILED");
         }
     }
 
+    // 로그인
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(
-            @RequestBody @Valid LoginRequest request) {
+    public ApiResponse<TokenResponse> login(@RequestBody LoginRequest req) {
         try {
-            return ResponseEntity.ok(ApiResponse.ok(authService.login(request), "로그인 성공"));
+            return ApiResponse.ok(authService.login(req), "로그인 성공");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage(), "LOGIN_FAILED"));
+            return ApiResponse.error(e.getMessage(), "LOGIN_FAILED");
         }
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getAllErrors().stream()
-                .map(ObjectError::getDefaultMessage)
-                .collect(Collectors.joining(", "));
-        return ResponseEntity.badRequest()
-                .body(ApiResponse.error(message, "INVALID_INPUT"));
+    // 로그아웃
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@RequestBody Map<String, String> req) {
+        authService.logout(req.get("refreshToken"));
+        return ApiResponse.ok(null, "로그아웃 되었습니다");
+    }
+
+    // 내 정보 조회
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> me(@AuthenticationPrincipal String email) {
+        return ApiResponse.ok(authService.getMe(email), "사용자 정보 조회 성공");
+    }
+
+    // Access Token 재발급
+    @PostMapping("/refresh")
+    public ApiResponse<TokenResponse> refresh(@RequestBody Map<String, String> req) {
+        try {
+            return ApiResponse.ok(authService.refresh(req.get("refreshToken")));
+        } catch (IllegalArgumentException e) {
+            return ApiResponse.error(e.getMessage(), "TOKEN_REFRESH_FAILED");
+        }
     }
 }

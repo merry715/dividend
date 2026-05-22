@@ -1,13 +1,11 @@
 package com.example.dividend.config;
 
-import com.example.dividend.security.JwtAuthFilter;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -18,10 +16,18 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -31,25 +37,11 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // 회원가입·로그인은 인증 불필요
-                .requestMatchers("/api/auth/**").permitAll()
-                // JWT 인증이 필요한 Stock API
-                .requestMatchers("/api/v1/stocks/**").authenticated()
-                // 기존 /api/v1/**, 정적 파일은 인증 없이 유지
-                .anyRequest().permitAll()
+                .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login",
+                        "/api/v1/auth/logout", "/api/v1/auth/refresh", "/api/v1/health").permitAll()
+                .anyRequest().authenticated()
             )
-            // 미인증 요청에 대해 401 JSON 응답
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((request, response, e) -> {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json;charset=UTF-8");
-                    response.getWriter().write(
-                        "{\"success\":false,\"data\":null,\"message\":\"인증이 필요합니다\",\"code\":\"UNAUTHORIZED\"}"
-                    );
-                })
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -63,7 +55,7 @@ public class SecurityConfig {
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration("/api/v1/**", config);
         return source;
     }
 }
