@@ -1,8 +1,13 @@
 package com.example.dividend.controller;
 
 import com.example.dividend.dto.ApiResponse;
+import com.example.dividend.dto.request.DividendConfirmRequest;
+import com.example.dividend.dto.request.DividendGenerateRequest;
 import com.example.dividend.entity.Dividend;
 import com.example.dividend.service.DividendService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,13 +16,10 @@ import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/v1/dividends")
+@RequiredArgsConstructor
 public class DividendController {
 
     private final DividendService dividendService;
-
-    public DividendController(DividendService dividendService) {
-        this.dividendService = dividendService;
-    }
 
     // 전체 배당 조회
     @GetMapping
@@ -27,19 +29,22 @@ public class DividendController {
 
     // 예상 배당 자동 생성
     @PostMapping("/generate")
-    public ApiResponse<List<Dividend>> generate(@RequestBody Map<String, Object> req) {
-        return ApiResponse.ok(dividendService.generate(req), "예상 배당이 생성되었습니다");
+    public ResponseEntity<ApiResponse<List<Dividend>>> generate(
+            @RequestBody @Valid DividendGenerateRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(dividendService.generate(request), "예상 배당이 생성되었습니다"));
     }
 
-    // 확정 전환
+    // 배당 확정 전환
     @PatchMapping("/{id}")
-    public ApiResponse<Dividend> confirm(
+    public ResponseEntity<ApiResponse<Dividend>> confirm(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> req) {
+            @RequestBody @Valid DividendConfirmRequest request) {
         try {
-            return ApiResponse.ok(dividendService.confirm(id, req), "배당이 확정되었습니다");
+            return ResponseEntity.ok(
+                    ApiResponse.ok(dividendService.confirm(id, request), "배당이 확정되었습니다"));
         } catch (NoSuchElementException e) {
-            return ApiResponse.error(e.getMessage(), "DIVIDEND_NOT_FOUND");
+            return ResponseEntity.ok(ApiResponse.error(e.getMessage(), "DIVIDEND_NOT_FOUND"));
         }
     }
 
