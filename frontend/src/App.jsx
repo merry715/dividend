@@ -4,6 +4,7 @@ import Sidebar from './components/Layout/Sidebar'
 import Topbar from './components/Layout/Topbar'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import AnalysisPage from './pages/AnalysisPage'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('accessToken')
@@ -45,7 +46,7 @@ export default function App() {
           <Route path="/stocks"       element={<div />} />
           <Route path="/transactions" element={<div />} />
           <Route path="/dividends"    element={<div />} />
-          <Route path="/analysis"     element={<div />} />
+          <Route path="/analysis"     element={<AnalysisPage />} />
           <Route path="/rebalancing"  element={<div />} />
           <Route path="/admin"        element={<div />} />
         </Route>
