@@ -4,6 +4,7 @@ import Sidebar from './components/Layout/Sidebar'
 import Topbar from './components/Layout/Topbar'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import AdminPage from './pages/AdminPage'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('accessToken')
@@ -47,7 +48,7 @@ export default function App() {
           <Route path="/dividends"    element={<div />} />
           <Route path="/analysis"     element={<div />} />
           <Route path="/rebalancing"  element={<div />} />
-          <Route path="/admin"        element={<div />} />
+          <Route path="/admin"        element={<AdminPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
