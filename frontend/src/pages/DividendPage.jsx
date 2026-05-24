@@ -1,69 +1,120 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import './DividendPage.css'
 import {
   Chart as ChartJS, CategoryScale, LinearScale,
   BarElement, Tooltip, Legend,
 } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
+import {
+  getAnnual, getCumulative, getMonthly, getYearly,
+  getByStock, getDividends, confirmDividend, generateDividends,
+} from '../api/dividend'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const fmt = (n) => Number(n).toLocaleString('ko-KR')
-
-const MONTHLY_DATA = [
-  { month: 1,  label: '1월',  expected: 72000,  confirmed: 75000, isConfirmed: true  },
-  { month: 2,  label: '2월',  expected: 45000,  confirmed: 48000, isConfirmed: true  },
-  { month: 3,  label: '3월',  expected: 95000,  confirmed: 91000, isConfirmed: true  },
-  { month: 4,  label: '4월',  expected: 62000,  confirmed: 65000, isConfirmed: true  },
-  { month: 5,  label: '5월',  expected: 38000,  confirmed: null,  isConfirmed: false },
-  { month: 6,  label: '6월',  expected: 112000, confirmed: null,  isConfirmed: false },
-  { month: 7,  label: '7월',  expected: 28000,  confirmed: null,  isConfirmed: false },
-  { month: 8,  label: '8월',  expected: 55000,  confirmed: null,  isConfirmed: false },
-  { month: 9,  label: '9월',  expected: 88000,  confirmed: null,  isConfirmed: false },
-  { month: 10, label: '10월', expected: 42000,  confirmed: null,  isConfirmed: false },
-  { month: 11, label: '11월', expected: 66000,  confirmed: null,  isConfirmed: false },
-  { month: 12, label: '12월', expected: 120000, confirmed: null,  isConfirmed: false },
-]
-
-const INITIAL_DIVIDENDS = [
-  { id: 1, name: '삼성전자',   perShare: 1444, payMonth: '4월', exDivDate: '2026-03-29', status: '확정', expectedTotal: 72200 },
-  { id: 2, name: 'NVDA',       perShare: 1200, payMonth: '6월', exDivDate: '2026-05-28', status: '예상', expectedTotal: 6000  },
-  { id: 3, name: 'SK하이닉스', perShare: 3000, payMonth: '4월', exDivDate: '2026-03-29', status: '확정', expectedTotal: 30000 },
-  { id: 4, name: 'AAPL',       perShare: 800,  payMonth: '8월', exDivDate: '2026-08-07', status: '예상', expectedTotal: 2400  },
-  { id: 5, name: 'TSLA',       perShare: 500,  payMonth: '6월', exDivDate: '2026-05-28', status: '예상', expectedTotal: 1000  },
-]
-
+const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 const today = new Date().toISOString().split('T')[0]
+const CURRENT_YEAR = new Date().getFullYear()
 
 export default function DividendPage() {
-  const [dividends, setDividends] = useState(INITIAL_DIVIDENDS)
-  const [convertForm, setConvertForm] = useState({ stockId: '', payDate: today, amount: '' })
+  const [annualData, setAnnualData]       = useState(null)
+  const [cumulativeData, setCumulativeData] = useState(null)
+  const [monthlyData, setMonthlyData]     = useState([])
+  const [yearlyData, setYearlyData]       = useState([])
+  const [byStockData, setByStockData]     = useState([])
+  const [dividendList, setDividendList]   = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [converting, setConverting]       = useState(false)
+  const [convertForm, setConvertForm]     = useState({ dividendId: '', payDate: today, amount: '' })
 
-  const annualExpected = useMemo(() =>
-    MONTHLY_DATA.reduce((s, m) => s + m.expected, 0), [])
+  const loadAll = useCallback(async (autoGenerate = true) => {
+    try {
+      const [annual, cumulative, monthly, yearly, byStock, dividends] = await Promise.all([
+        getAnnual(CURRENT_YEAR),
+        getCumulative(),
+        getMonthly(CURRENT_YEAR),
+        getYearly(),
+        getByStock(),
+        getDividends(),
+      ])
 
-  const accumulated = useMemo(() =>
-    MONTHLY_DATA.filter(m => m.isConfirmed).reduce((s, m) => s + (m.confirmed ?? 0), 0), [])
+      const byStockList = byStock.data.data
 
-  const handleConvert = () => {
-    if (!convertForm.stockId || !convertForm.amount) return
-    setDividends(prev =>
-      prev.map(d =>
-        d.id === Number(convertForm.stockId)
-          ? { ...d, status: '확정', expectedTotal: Number(convertForm.amount) }
-          : d
-      )
-    )
-    setConvertForm(f => ({ ...f, stockId: '', amount: '' }))
+      if (byStockList.length === 0 && autoGenerate) {
+        await generateDividends(CURRENT_YEAR)
+        return loadAll(false)
+      }
+
+      setAnnualData(annual.data.data)
+      setCumulativeData(cumulative.data.data)
+      setMonthlyData(monthly.data.data)
+      setYearlyData(yearly.data.data)
+      setByStockData(byStockList)
+      setDividendList(dividends.data.data)
+    } catch (e) {
+      console.error('배당 데이터 로딩 실패', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadAll() }, [loadAll])
+
+  // 12개월 배열로 정규화 (API는 데이터 있는 달만 반환)
+  const normalizedMonthly = useMemo(() =>
+    Array.from({ length: 12 }, (_, i) => {
+      const month = i + 1
+      const found = monthlyData.find(m => m.month === month)
+      return {
+        month,
+        label: MONTH_LABELS[i],
+        expected:    found?.expectedAmount  ?? 0,
+        confirmed:   found?.confirmedAmount ?? 0,
+        isConfirmed: (found?.confirmedAmount ?? 0) > 0,
+      }
+    }),
+  [monthlyData])
+
+  const expectedItems = useMemo(
+    () => dividendList.filter(d => d.status === 'EXPECTED'),
+    [dividendList]
+  )
+
+  const handleConvert = async () => {
+    if (!convertForm.dividendId || !convertForm.amount) return
+    setConverting(true)
+    try {
+      await confirmDividend(Number(convertForm.dividendId), {
+        confirmedDividend: Number(convertForm.amount),
+        paymentDate: convertForm.payDate,
+        status: 'CONFIRMED',
+      })
+      setConvertForm({ dividendId: '', payDate: today, amount: '' })
+      await loadAll()
+    } catch (e) {
+      console.error('확정 전환 실패', e)
+    } finally {
+      setConverting(false)
+    }
   }
 
   const barData = {
-    labels: ['2023', '2024', '2025', '2026'],
+    labels: yearlyData.map(y => String(y.year)),
     datasets: [{
       label: '연간 배당금',
-      data: [480000, 624000, 852000, annualExpected],
-      backgroundColor: ['#C8EFE3', '#9FE1CB', '#5DCAA5', 'rgba(29,158,117,0.72)'],
-      borderColor:     ['#9FE1CB', '#5DCAA5', '#1D9E75', '#1D9E75'],
+      data: yearlyData.map(y => y.totalAmount),
+      backgroundColor: yearlyData.map((_, i, arr) =>
+        i === arr.length - 1 ? 'rgba(29,158,117,0.75)'
+        : i === arr.length - 2 ? '#5DCAA5'
+        : i === arr.length - 3 ? '#9FE1CB'
+        : '#C8EFE3'
+      ),
+      borderColor: yearlyData.map((_, i, arr) =>
+        i >= arr.length - 2 ? '#1D9E75'
+        : i === arr.length - 3 ? '#5DCAA5'
+        : '#9FE1CB'
+      ),
       borderWidth: 2,
       borderRadius: 8,
       borderSkipped: false,
@@ -97,6 +148,12 @@ export default function DividendPage() {
     },
   }
 
+  if (loading) return (
+    <div className="dp-page dp-loading">
+      <p>배당 데이터를 불러오는 중...</p>
+    </div>
+  )
+
   return (
     <div className="dp-page">
 
@@ -109,14 +166,14 @@ export default function DividendPage() {
       {/* ── 요약 카드 2개 ── */}
       <div className="dp-summary-row">
         <div className="dp-card dp-sum-card">
-          <p className="dp-sum-label">2026 연간 예상 배당금</p>
-          <p className="dp-sum-value">{fmt(annualExpected)}<span className="dp-sum-unit">원</span></p>
+          <p className="dp-sum-label">{CURRENT_YEAR} 연간 예상 배당금</p>
+          <p className="dp-sum-value">{fmt(annualData?.totalExpected ?? 0)}<span className="dp-sum-unit">원</span></p>
           <p className="dp-sum-sub">12개월 예상 합계</p>
         </div>
         <div className="dp-card dp-sum-card">
           <p className="dp-sum-label">누적 배당금</p>
-          <p className="dp-sum-value">{fmt(accumulated)}<span className="dp-sum-unit">원</span></p>
-          <p className="dp-sum-sub">확정 배당 합계 · 4개월</p>
+          <p className="dp-sum-value">{fmt(cumulativeData?.cumulativeAmount ?? 0)}<span className="dp-sum-unit">원</span></p>
+          <p className="dp-sum-sub">올해 {normalizedMonthly.filter(m => m.isConfirmed).length}개월 확정 포함</p>
         </div>
       </div>
 
@@ -124,7 +181,7 @@ export default function DividendPage() {
       <div className="dp-card dp-monthly-section">
         <p className="dp-card-title">월별 배당 조회</p>
         <div className="dp-monthly-grid">
-          {MONTHLY_DATA.map(m => (
+          {normalizedMonthly.map(m => (
             <div key={m.month} className={`dp-month-card${m.isConfirmed ? ' confirmed' : ''}`}>
               <div className="dp-month-header">
                 <span className="dp-month-name">{m.label}</span>
@@ -135,7 +192,7 @@ export default function DividendPage() {
               <div className="dp-month-amounts">
                 <div className="dp-month-row">
                   <span className="dp-month-row-label">예상</span>
-                  <span className="dp-month-row-val">{fmt(m.expected)}</span>
+                  <span className="dp-month-row-val">{m.expected > 0 ? fmt(m.expected) : '—'}</span>
                 </div>
                 <div className="dp-month-row">
                   <span className="dp-month-row-label confirmed">확정</span>
@@ -149,7 +206,7 @@ export default function DividendPage() {
         </div>
       </div>
 
-      {/* ── 연도별 배당 차트 (전체 너비) ── */}
+      {/* ── 연도별 배당 차트 ── */}
       <div className="dp-card dp-bar-card">
         <p className="dp-card-title">연도별 배당</p>
         <div className="dp-bar-wrap">
@@ -157,18 +214,20 @@ export default function DividendPage() {
         </div>
       </div>
 
-      {/* ── 확정 배당 전환 폼 (전체 너비 한 줄) ── */}
+      {/* ── 확정 배당 전환 폼 ── */}
       <div className="dp-card dp-convert-card">
         <p className="dp-card-title">확정 배당 전환</p>
         <div className="dp-convert-row">
           <select
             className="dp-fi dp-fi-select"
-            value={convertForm.stockId}
-            onChange={e => setConvertForm(f => ({ ...f, stockId: e.target.value }))}
+            value={convertForm.dividendId}
+            onChange={e => setConvertForm(f => ({ ...f, dividendId: e.target.value }))}
           >
             <option value="">종목 선택</option>
-            {dividends.filter(d => d.status === '예상').map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+            {expectedItems.map(d => (
+              <option key={d.id} value={d.id}>
+                {d.stockName} ({d.paymentMonth}월)
+              </option>
             ))}
           </select>
           <input
@@ -186,17 +245,17 @@ export default function DividendPage() {
           />
           <button
             className="dp-convert-cancel"
-            onClick={() => setConvertForm({ stockId: '', payDate: today, amount: '' })}
+            onClick={() => setConvertForm({ dividendId: '', payDate: today, amount: '' })}
           >취소</button>
           <button
             className="dp-convert-save"
             onClick={handleConvert}
-            disabled={!convertForm.stockId || !convertForm.amount}
-          >저장</button>
+            disabled={!convertForm.dividendId || !convertForm.amount || converting}
+          >{converting ? '저장 중...' : '저장'}</button>
         </div>
       </div>
 
-      {/* ── 하단: 종목별 배당 정보 테이블 (전체 너비) ── */}
+      {/* ── 종목별 배당 정보 테이블 ── */}
       <div className="dp-card dp-stock-card">
         <p className="dp-card-title">종목별 배당 정보</p>
         <div className="dp-stock-table-wrap">
@@ -212,20 +271,28 @@ export default function DividendPage() {
               </tr>
             </thead>
             <tbody>
-              {dividends.map(d => (
-                <tr key={d.id}>
-                  <td className="dp-stock-name">{d.name}</td>
-                  <td className="right">{fmt(d.perShare)}원</td>
-                  <td className="center">{d.payMonth}</td>
-                  <td className="dp-date">{d.exDivDate}</td>
-                  <td className="center">
-                    <span className={`dp-status-badge ${d.status === '확정' ? 'confirmed' : 'expected'}`}>
-                      {d.status}
-                    </span>
+              {byStockData.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="dp-empty">
+                    배당 정보가 없습니다. 예상 배당을 생성해 주세요.
                   </td>
-                  <td className="right dp-expected-total">{fmt(d.expectedTotal)}원</td>
                 </tr>
-              ))}
+              ) : (
+                byStockData.map(d => (
+                  <tr key={d.stockId}>
+                    <td className="dp-stock-name">{d.stockName}</td>
+                    <td className="right">{fmt(d.lastYearDividendPerShare)}원</td>
+                    <td className="center">{d.paymentMonths?.map(m => m + '월').join(', ')}</td>
+                    <td className="dp-date">{d.exDividendDate}</td>
+                    <td className="center">
+                      <span className={`dp-status-badge ${d.status === 'CONFIRMED' ? 'confirmed' : 'expected'}`}>
+                        {d.status === 'CONFIRMED' ? '확정' : '예상'}
+                      </span>
+                    </td>
+                    <td className="right dp-expected-total">{fmt(d.expectedDividend)}원</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -230,6 +230,24 @@
 .dp-convert-save:hover    { background: #189068; }
 .dp-convert-save:disabled { background: #ccc; cursor: default; }
 
+/* ── 로딩 상태 ── */
+.dp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 14px;
+}
+
+
+/* ── 빈 상태 셀 ── */
+.dp-empty {
+  text-align: center;
+  color: #bbb;
+  font-size: 13px;
+  padding: 24px 0 !important;
+}
+
 /* ── 종목별 배당 정보 테이블 (전체 너비) ── */
 .dp-stock-table {
   width: 100%;
