@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import './AnalysisPage.css'
 import {
   Chart as ChartJS,
@@ -7,57 +7,86 @@ import {
   Tooltip, Legend,
 } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
+import {
+  getSummary, getStockWeight, getSectorWeight,
+  getDividendHistory, getGoal, saveGoal,
+} from '../api/analysis'
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const fmt = (n) => Number(n).toLocaleString('ko-KR')
-
-const ANNUAL_EXPECTED  = 823_000
-const ACCUMULATED      = 279_000
-const TOTAL_INVESTED   = 7_240_000
-const EVAL_AMOUNT      = 8_150_000
-const DIVIDEND_YIELD   = 3.8
-const PNL              = EVAL_AMOUNT - TOTAL_INVESTED
-const PNL_PCT          = ((PNL / TOTAL_INVESTED) * 100).toFixed(2)
-
-const YEARLY_VALUES    = [420_000, 568_000, 732_000, ANNUAL_EXPECTED]
-const YOY_GROWTH       = (((ANNUAL_EXPECTED / YEARLY_VALUES[2]) - 1) * 100).toFixed(1)
-
-const STOCK_WEIGHTS = [
-  { rank: 1, name: '삼성전자',   weight: 32.5, color: '#1D9E75' },
-  { rank: 2, name: 'NVDA',       weight: 24.8, color: '#5DCAA5' },
-  { rank: 3, name: 'SK하이닉스', weight: 18.2, color: '#9FE1CB' },
-  { rank: 4, name: 'AAPL',       weight: 14.1, color: '#B8E4D4' },
-  { rank: 5, name: 'TSLA',       weight: 10.4, color: '#DDF0E9' },
-]
-
-const SECTOR_WEIGHTS = [
-  { rank: 1, name: '반도체', weight: 50.7, color: '#1D9E75' },
-  { rank: 2, name: '기술',   weight: 35.5, color: '#5DCAA5' },
-  { rank: 3, name: '자동차', weight: 8.9,  color: '#9FE1CB' },
-  { rank: 4, name: '기타',   weight: 4.9,  color: '#C8EFE3' },
-]
+const WEIGHT_COLORS = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#B8E4D4', '#DDF0E9', '#C8EFE3']
 
 export default function AnalysisPage() {
-  const [weightTab, setWeightTab] = useState('stock')
-  const [goalInput, setGoalInput] = useState('1000000')
-  const [savedGoal, setSavedGoal] = useState(1_000_000)
+  const [summary, setSummary]               = useState(null)
+  const [stockWeights, setStockWeights]     = useState([])
+  const [sectorWeights, setSectorWeights]   = useState([])
+  const [dividendHistory, setDividendHistory] = useState([])
+  const [goal, setGoal]                     = useState(null)
+  const [goalId, setGoalId]                 = useState(null)
+  const [loading, setLoading]               = useState(true)
+  const [saving, setSaving]                 = useState(false)
+  const [weightTab, setWeightTab]           = useState('stock')
+  const [goalInput, setGoalInput]           = useState('')
 
-  const progressPct   = Math.min(100, Math.round((ANNUAL_EXPECTED / savedGoal) * 100))
-  const monthsToGoal  = progressPct >= 100 ? 0 : Math.ceil((savedGoal - ANNUAL_EXPECTED) / (ANNUAL_EXPECTED / 12))
-  const goalAccPct    = Math.round((ACCUMULATED / savedGoal) * 100)
+  const loadAll = useCallback(async () => {
+    try {
+      const [summaryRes, stockRes, sectorRes, historyRes, goalRes] = await Promise.all([
+        getSummary(),
+        getStockWeight(),
+        getSectorWeight(),
+        getDividendHistory(),
+        getGoal(),
+      ])
+      setSummary(summaryRes.data.data)
+      setStockWeights(stockRes.data.data.map((w, i) => ({
+        ...w, color: WEIGHT_COLORS[i] ?? '#C8EFE3',
+      })))
+      setSectorWeights(sectorRes.data.data.map((w, i) => ({
+        ...w, color: WEIGHT_COLORS[i] ?? '#C8EFE3',
+      })))
+      setDividendHistory(historyRes.data.data)
+      const g = goalRes.data.data
+      setGoal(g)
+      setGoalInput(String(g?.targetDividend ?? ''))
+      if (g?.id) setGoalId(g.id)
+    } catch (e) {
+      console.error('분석 데이터 로딩 실패', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  const handleSaveGoal = () => {
+  useEffect(() => { loadAll() }, [loadAll])
+
+  const handleSaveGoal = async () => {
     const num = Number(String(goalInput).replace(/,/g, ''))
-    if (num > 0) setSavedGoal(num)
+    if (!num || num <= 0) return
+    setSaving(true)
+    try {
+      const res = await saveGoal(num, goalId)
+      const g = res.data.data
+      setGoal(g)
+      if (g?.id) setGoalId(g.id)
+    } catch (e) {
+      console.error('목표 저장 실패', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const activeWeights = weightTab === 'stock' ? STOCK_WEIGHTS : SECTOR_WEIGHTS
+  // 비중 리스트 — 탭에 따라 stockName / sector 필드 통일
+  const activeWeights = (weightTab === 'stock' ? stockWeights : sectorWeights).map((w, i) => ({
+    rank:   i + 1,
+    name:   w.stockName ?? w.sector,
+    weight: w.weight,
+    color:  w.color,
+  }))
 
   const donutData = {
     labels: activeWeights.map(w => w.name),
     datasets: [{
-      data: activeWeights.map(w => w.weight),
+      data:            activeWeights.map(w => w.weight),
       backgroundColor: activeWeights.map(w => w.color),
       borderColor: '#fff',
       borderWidth: 2,
@@ -76,12 +105,21 @@ export default function AnalysisPage() {
   }
 
   const barData = {
-    labels: ['2023', '2024', '2025', '2026'],
+    labels: dividendHistory.map(y => String(y.year)),
     datasets: [{
       label: '연간 배당금',
-      data: YEARLY_VALUES,
-      backgroundColor: ['#C8EFE3', '#9FE1CB', '#5DCAA5', 'rgba(29,158,117,0.75)'],
-      borderColor:     ['#9FE1CB', '#5DCAA5', '#1D9E75', '#1D9E75'],
+      data:  dividendHistory.map(y => y.totalDividend),
+      backgroundColor: dividendHistory.map((_, i, arr) =>
+        i === arr.length - 1 ? 'rgba(29,158,117,0.75)'
+        : i === arr.length - 2 ? '#5DCAA5'
+        : i === arr.length - 3 ? '#9FE1CB'
+        : '#C8EFE3'
+      ),
+      borderColor: dividendHistory.map((_, i, arr) =>
+        i >= arr.length - 2 ? '#1D9E75'
+        : i === arr.length - 3 ? '#5DCAA5'
+        : '#9FE1CB'
+      ),
       borderWidth: 2,
       borderRadius: 8,
       borderSkipped: false,
@@ -115,6 +153,24 @@ export default function AnalysisPage() {
     },
   }
 
+  // 파생 값
+  const progressPct  = goal ? Math.min(100, Math.round(goal.achievementRate)) : 0
+  const monthsToGoal = goal?.timeToGoal ?? 0
+  const pnl    = summary?.evaluationProfit ?? 0
+  const pnlPct = summary?.totalInvestment
+    ? ((pnl / summary.totalInvestment) * 100).toFixed(2)
+    : '0.00'
+  const lastTwo   = dividendHistory.slice(-2)
+  const yoyGrowth = lastTwo.length === 2 && lastTwo[0].totalDividend > 0
+    ? (((lastTwo[1].totalDividend / lastTwo[0].totalDividend) - 1) * 100).toFixed(1)
+    : null
+
+  if (loading) return (
+    <div className="ap-page ap-loading">
+      <p>분석 데이터를 불러오는 중...</p>
+    </div>
+  )
+
   return (
     <div className="ap-page">
 
@@ -132,14 +188,14 @@ export default function AnalysisPage() {
             <div className="ap-goal-item">
               <span className="ap-goal-item-label">예상 배당금</span>
               <span className="ap-goal-item-val">
-                {fmt(ANNUAL_EXPECTED)}<span className="ap-goal-item-unit">원</span>
+                {fmt(goal?.expectedDividend ?? 0)}<span className="ap-goal-item-unit">원</span>
               </span>
             </div>
             <span className="ap-goal-sep">/</span>
             <div className="ap-goal-item">
               <span className="ap-goal-item-label">목표 배당금</span>
               <span className="ap-goal-item-val accent">
-                {fmt(savedGoal)}<span className="ap-goal-item-unit">원</span>
+                {fmt(goal?.targetDividend ?? 0)}<span className="ap-goal-item-unit">원</span>
               </span>
             </div>
           </div>
@@ -171,7 +227,11 @@ export default function AnalysisPage() {
               onChange={e => setGoalInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSaveGoal()}
             />
-            <button className="ap-goal-save-btn" onClick={handleSaveGoal}>저장</button>
+            <button
+              className="ap-goal-save-btn"
+              onClick={handleSaveGoal}
+              disabled={saving}
+            >{saving ? '저장 중...' : '저장'}</button>
           </div>
         </div>
 
@@ -182,30 +242,28 @@ export default function AnalysisPage() {
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">총 투자금</p>
-          <p className="ap-port-value">{fmt(TOTAL_INVESTED)}<span className="ap-port-unit">원</span></p>
-          <p className={`ap-port-sub ${PNL >= 0 ? 'profit' : 'loss'}`}>
-            {PNL >= 0 ? '+' : ''}{fmt(PNL)}원
+          <p className="ap-port-value">{fmt(summary?.totalInvestment ?? 0)}<span className="ap-port-unit">원</span></p>
+          <p className={`ap-port-sub ${pnl >= 0 ? 'profit' : 'loss'}`}>
+            {pnl >= 0 ? '+' : ''}{fmt(pnl)}원
           </p>
         </div>
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">평가금액</p>
-          <p className="ap-port-value">{fmt(EVAL_AMOUNT)}<span className="ap-port-unit">원</span></p>
-          <p className={`ap-port-sub ${PNL >= 0 ? 'profit' : 'loss'}`}>
-            {PNL >= 0 ? '+' : ''}{PNL_PCT}% 수익
+          <p className="ap-port-value">{fmt(summary?.evaluationAmount ?? 0)}<span className="ap-port-unit">원</span></p>
+          <p className={`ap-port-sub ${pnl >= 0 ? 'profit' : 'loss'}`}>
+            {pnl >= 0 ? '+' : ''}{pnlPct}% 수익
           </p>
         </div>
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">배당수익률</p>
-          <p className="ap-port-value">{DIVIDEND_YIELD.toFixed(1)}<span className="ap-port-unit">%</span></p>
-          <p className="ap-port-sub profit">시장평균 대비 +1.7%p</p>
+          <p className="ap-port-value">{(summary?.dividendYield ?? 0).toFixed(1)}<span className="ap-port-unit">%</span></p>
         </div>
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">누적 배당</p>
-          <p className="ap-port-value">{fmt(ACCUMULATED)}<span className="ap-port-unit">원</span></p>
-          <p className="ap-port-sub neutral">목표 달성률 {goalAccPct}%</p>
+          <p className="ap-port-value">{fmt(summary?.cumulativeDividend ?? 0)}<span className="ap-port-unit">원</span></p>
         </div>
 
       </div>
@@ -253,7 +311,14 @@ export default function AnalysisPage() {
         <div className="ap-card ap-yearly-card">
           <div className="ap-yearly-head">
             <p className="ap-card-title">연도별 비교</p>
-            <span className="ap-yearly-growth">전년 대비 +{YOY_GROWTH}% 증가</span>
+            {yoyGrowth !== null && (
+              <span
+                className="ap-yearly-growth"
+                style={Number(yoyGrowth) < 0 ? { color: '#E24B4A' } : undefined}
+              >
+                전년 대비 {Number(yoyGrowth) >= 0 ? `+${yoyGrowth}` : yoyGrowth}% {Number(yoyGrowth) >= 0 ? '증가' : '감소'}
+              </span>
+            )}
           </div>
           <div className="ap-bar-wrap">
             <Bar data={barData} options={barOptions} />

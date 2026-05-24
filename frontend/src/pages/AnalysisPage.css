@@ -11,6 +11,14 @@
   overflow: hidden;
 }
 
+/* ── 로딩 ── */
+.ap-page.ap-loading {
+  justify-content: center;
+  align-items: center;
+  color: #aaa;
+  font-size: 13px;
+}
+
 /* ── 헤더 ── */
 .ap-header   { flex-shrink: 0; }
 .ap-title    { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 0 0 2px; color: #333; }
