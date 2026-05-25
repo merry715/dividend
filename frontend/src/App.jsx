@@ -5,6 +5,8 @@ import Topbar from './components/Layout/Topbar'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import TradePage from './pages/TradePage'
+import StockPage from './pages/StockPage'
+import DashboardPage from './pages/DashboardPage'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('accessToken')
@@ -42,8 +44,8 @@ export default function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route element={<PrivateRoute><MainLayout collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} /></PrivateRoute>}>
-          <Route path="/dashboard"    element={<div />} />
-          <Route path="/stocks"       element={<div />} />
+          <Route path="/dashboard"    element={<DashboardPage />} />
+          <Route path="/stocks"       element={<StockPage />} />
           <Route path="/transactions" element={<TradePage />} />
           <Route path="/dividends"    element={<div />} />
           <Route path="/analysis"     element={<div />} />
