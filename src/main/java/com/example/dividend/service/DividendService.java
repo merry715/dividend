@@ -164,6 +164,12 @@ public class DividendService {
         return result;
     }
 
+    // ── [7] 전체 배당 조회 ──────────────────────────────────────
+
+    public List<Dividend> getAll(Long userId) {
+        return dividendRepository.findByUserId(userId);
+    }
+
     // ── 내부 유틸 ────────────────────────────────────────────────
 
     private List<Integer> resolvePaymentMonths(String dividendCycle) {

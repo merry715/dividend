@@ -73,9 +73,8 @@ public class DividendController {
             @AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(dividendService.getYearly(userId));
     }
-    // 직접 추가
     @GetMapping
-    public ApiResponse<List<Dividend>> getAll() {
-        return ApiResponse.ok(dividendService.getAll());
+    public ApiResponse<List<Dividend>> getAll(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(dividendService.getAll(userId));
     }
 }

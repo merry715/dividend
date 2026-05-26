@@ -87,8 +87,8 @@ public class AnalysisService {
         Map<Integer, Integer> byYear = new TreeMap<>(Comparator.reverseOrder());
         for (Dividend d : dividends) {
             int amount = "CONFIRMED".equals(d.getStatus())
-                    ? d.getConfirmedDividend()
-                    : d.getExpectedDividend();
+                    ? (d.getConfirmedAmount() != null ? d.getConfirmedAmount().intValue() : 0)
+                    : (d.getExpectedAmount()  != null ? d.getExpectedAmount().intValue()  : 0);
             byYear.merge(d.getYear(), amount, Integer::sum);
         }
 
@@ -166,8 +166,8 @@ public class AnalysisService {
         return dividendRepository.findByStockIdIn(stockIds).stream()
                 .filter(d -> d.getYear() == year)
                 .mapToInt(d -> "CONFIRMED".equals(d.getStatus())
-                        ? d.getConfirmedDividend()
-                        : d.getExpectedDividend())
+                        ? (d.getConfirmedAmount() != null ? d.getConfirmedAmount().intValue() : 0)
+                        : (d.getExpectedAmount()  != null ? d.getExpectedAmount().intValue()  : 0))
                 .sum();
     }
 }
