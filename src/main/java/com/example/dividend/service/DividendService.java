@@ -3,131 +3,175 @@ package com.example.dividend.service;
 import com.example.dividend.dto.request.DividendConfirmRequest;
 import com.example.dividend.dto.request.DividendGenerateRequest;
 import com.example.dividend.entity.Dividend;
+import com.example.dividend.entity.Stock;
 import com.example.dividend.repository.DividendRepository;
+import com.example.dividend.repository.StockRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DividendService {
 
     private final DividendRepository dividendRepository;
+    private final StockRepository    stockRepository;
 
-    public DividendService(DividendRepository dividendRepository) {
-        this.dividendRepository = dividendRepository;
+    // ── [1] 예상 배당 자동 생성 ─────────────────────────────────
+
+    @Transactional
+    public List<Dividend> generateExpectedDividends(Long userId, Long stockId, Integer targetYear) {
+        Stock stock = stockRepository.findByIdAndUser_Id(stockId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "종목을 찾을 수 없습니다"));
+
+        if (stock.getQuantity() < 1) {
+            return List.of(); // 보유 수량 0이면 생성 안 함
+        }
+
+        int year = (targetYear != null) ? targetYear : LocalDate.now().getYear();
+        List<Integer> paymentMonths = resolvePaymentMonths(stock.getDividendCycle());
+
+        Integer perShare = stock.getExpectedDividendPerShare();
+        BigDecimal expectedAmount = (perShare != null && perShare > 0)
+                ? BigDecimal.valueOf((long) perShare * stock.getQuantity())
+                : BigDecimal.ZERO;
+
+        List<Dividend> created = new ArrayList<>();
+        for (int month : paymentMonths) {
+            if (dividendRepository.existsByUserIdAndStockIdAndYearAndMonth(userId, stockId, year, month)) {
+                continue; // 중복 방지
+            }
+            Dividend d = new Dividend();
+            d.setUserId(userId);
+            d.setStockId(stockId);
+            d.setYear(year);
+            d.setMonth(month);
+            d.setExpectedAmount(expectedAmount);
+            d.setStatus("EXPECTED");
+            created.add(dividendRepository.save(d));
+        }
+        return created;
     }
 
-    public List<Dividend> getAll() {
-        return dividendRepository.findAll();
-    }
+    // ── [2] 배당 확정 처리 (EXPECTED → CONFIRMED) ───────────────
 
-    public List<Dividend> generate(DividendGenerateRequest req) {
-        // TODO: 보유 종목 기반 예상 배당 자동 생성
-        // 1. req.getYear() 로 연도 사용
-        // 2. HoldingStock 조회
-        // 3. 종목별 직전 연도 배당 이력 기반으로 expectedDividend 추정
-        // 4. Dividend 레코드 생성 (status = EXPECTED) 후 저장
-        return List.of();
-    }
+    @Transactional
+    public Dividend confirm(Long dividendId, Long userId, DividendConfirmRequest req) {
+        Dividend dividend = dividendRepository.findByIdAndUserId(dividendId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "배당 정보를 찾을 수 없습니다: " + dividendId));
 
-    public Dividend confirm(Long id, DividendConfirmRequest req) {
-        Dividend dividend = dividendRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("배당 정보를 찾을 수 없습니다: " + id));
+        if (!"EXPECTED".equals(dividend.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "이미 확정된 배당이거나 상태 전환이 불가능합니다");
+        }
 
         dividend.setStatus("CONFIRMED");
-        dividend.setConfirmedDividend(req.getConfirmedDividend());
+        dividend.setConfirmedAmount(BigDecimal.valueOf(req.getConfirmedAmount()));
         dividend.setPaymentDate(req.getPaymentDate());
-
         return dividendRepository.save(dividend);
     }
 
-    public List<Map<String, Object>> getMonthly() {
-        Map<Integer, int[]> monthMap = new TreeMap<>();
-        for (int i = 1; i <= 12; i++) monthMap.put(i, new int[]{0, 0}); // [expected, confirmed]
+    // ── [3] 월별 배당금 조회 ────────────────────────────────────
 
-        for (Dividend d : dividendRepository.findAll()) {
-            int month = d.getPaymentMonth();
-            if (monthMap.containsKey(month)) {
-                monthMap.get(month)[0] += d.getExpectedDividend();
-                monthMap.get(month)[1] += d.getConfirmedDividend();
+    public List<Map<String, Object>> getMonthly(Long userId, int year) {
+        List<Dividend> dividends = dividendRepository.findByUserIdAndYear(userId, year);
+
+        long[] expected  = new long[13]; // index 1~12
+        long[] confirmed = new long[13];
+
+        for (Dividend d : dividends) {
+            int m = d.getMonth();
+            if (m < 1 || m > 12) continue;
+            if ("EXPECTED".equals(d.getStatus()) && d.getExpectedAmount() != null) {
+                expected[m] += d.getExpectedAmount().longValue();
+            } else if ("CONFIRMED".equals(d.getStatus())) {
+                if (d.getConfirmedAmount() != null) confirmed[m] += d.getConfirmedAmount().longValue();
+                if (d.getExpectedAmount()  != null) expected[m]  += d.getExpectedAmount().longValue();
             }
         }
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<Integer, int[]> e : monthMap.entrySet()) {
+        for (int m = 1; m <= 12; m++) {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("month",     e.getKey());
-            row.put("expected",  e.getValue()[0]);
-            row.put("confirmed", e.getValue()[1]);
+            row.put("month",           m);
+            row.put("expectedAmount",  expected[m]);
+            row.put("confirmedAmount", confirmed[m]);
             result.add(row);
         }
         return result;
     }
 
-    public Map<String, Object> getAnnual() {
-        int currentYear = LocalDate.now().getYear();
-        List<Dividend> dividends = dividendRepository.findByYear(currentYear);
+    // ── [4] 연간 예상 배당금 ────────────────────────────────────
 
-        int totalExpected  = dividends.stream().mapToInt(Dividend::getExpectedDividend).sum();
-        int totalConfirmed = dividends.stream().mapToInt(Dividend::getConfirmedDividend).sum();
+    public Map<String, Object> getAnnual(Long userId, int year) {
+        List<Dividend> dividends = dividendRepository.findByUserIdAndYear(userId, year);
+
+        long total = dividends.stream()
+                .mapToLong(d -> {
+                    if ("CONFIRMED".equals(d.getStatus()) && d.getConfirmedAmount() != null)
+                        return d.getConfirmedAmount().longValue();
+                    if ("EXPECTED".equals(d.getStatus()) && d.getExpectedAmount() != null)
+                        return d.getExpectedAmount().longValue();
+                    return 0L;
+                })
+                .sum();
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("year",           currentYear);
-        result.put("totalExpected",  totalExpected);
-        result.put("totalConfirmed", totalConfirmed);
+        result.put("year",                 year);
+        result.put("totalExpectedAmount",  total);
         return result;
     }
 
-    public List<Map<String, Object>> getYearly() {
-        Map<Integer, int[]> yearMap = new TreeMap<>();
-        for (Dividend d : dividendRepository.findAll()) {
-            yearMap.computeIfAbsent(d.getYear(), k -> new int[]{0, 0});
-            yearMap.get(d.getYear())[0] += d.getExpectedDividend();
-            yearMap.get(d.getYear())[1] += d.getConfirmedDividend();
+    // ── [5] 누적 배당금 조회 ────────────────────────────────────
+
+    public Map<String, Object> getCumulative(Long userId) {
+        List<Object[]> rows = dividendRepository.findCumulativeAggregation(userId);
+
+        long totalConfirmed = 0L, totalExpected = 0L;
+        if (!rows.isEmpty() && rows.get(0) != null) {
+            Object[] row = rows.get(0);
+            totalConfirmed = row[0] != null ? ((Number) row[0]).longValue() : 0L;
+            totalExpected  = row[1] != null ? ((Number) row[1]).longValue() : 0L;
         }
 
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<Integer, int[]> e : yearMap.entrySet()) {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("year",          e.getKey());
-            row.put("totalExpected", e.getValue()[0]);
-            row.put("totalConfirmed", e.getValue()[1]);
-            result.add(row);
-        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalConfirmedAmount", totalConfirmed);
+        result.put("totalExpectedAmount",  totalExpected);
         return result;
     }
 
-    public List<Map<String, Object>> getCumulative() {
-        List<Map<String, Object>> yearly = getYearly();
+    // ── [6] 연도별 배당금 조회 ──────────────────────────────────
+
+    public List<Map<String, Object>> getYearly(Long userId) {
+        List<Object[]> rows = dividendRepository.findYearlyAggregation(userId);
 
         List<Map<String, Object>> result = new ArrayList<>();
-        int cumulative = 0;
-        for (Map<String, Object> row : yearly) {
-            cumulative += (int) row.get("totalConfirmed");
-            Map<String, Object> item = new LinkedHashMap<>(row);
-            item.put("cumulative", cumulative);
+        for (Object[] row : rows) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("year",            ((Number) row[0]).intValue());
+            item.put("confirmedAmount", row[1] != null ? ((Number) row[1]).longValue() : 0L);
+            item.put("expectedAmount",  row[2] != null ? ((Number) row[2]).longValue() : 0L);
             result.add(item);
         }
         return result;
     }
 
-    public List<Map<String, Object>> getByStock() {
-        Map<Long, int[]> stockMap = new LinkedHashMap<>();
-        for (Dividend d : dividendRepository.findAll()) {
-            stockMap.computeIfAbsent(d.getStockId(), k -> new int[]{0, 0});
-            stockMap.get(d.getStockId())[0] += d.getExpectedDividend();
-            stockMap.get(d.getStockId())[1] += d.getConfirmedDividend();
-        }
+    // ── 내부 유틸 ────────────────────────────────────────────────
 
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map.Entry<Long, int[]> e : stockMap.entrySet()) {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("stockId",       e.getKey());
-            row.put("totalExpected", e.getValue()[0]);
-            row.put("totalConfirmed", e.getValue()[1]);
-            result.add(row);
-        }
-        return result;
+    private List<Integer> resolvePaymentMonths(String dividendCycle) {
+        if (dividendCycle == null) return List.of(12);
+        return switch (dividendCycle.toUpperCase()) {
+            case "MONTHLY"   -> List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+            case "QUARTERLY" -> List.of(3, 6, 9, 12);
+            default          -> List.of(12); // ANNUAL
+        };
     }
 }

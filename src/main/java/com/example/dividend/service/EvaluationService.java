@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,13 +49,19 @@ public class EvaluationService {
             BigDecimal investment = stock.getAvgPrice().multiply(qty);
             BigDecimal evaluation = stock.getPreviousClose().multiply(qty);
 
-            totalInvestment  = totalInvestment.add(investment);
-            totalEvaluation  = totalEvaluation.add(evaluation);
+            totalInvestment = totalInvestment.add(investment);
+            totalEvaluation = totalEvaluation.add(evaluation);
             priceAvailable++;
         }
 
         BigDecimal totalGain       = totalEvaluation.subtract(totalInvestment);
         BigDecimal totalReturnRate = calcReturnRate(totalGain, totalInvestment);
+
+        // source별 종목 수 집계
+        Map<String, Long> priceSourceCounts = stocks.stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getPriceSource() != null ? s.getPriceSource() : "unavailable",
+                        Collectors.counting()));
 
         return EvaluationSummaryResponse.builder()
                 .totalStocks(stocks.size())
@@ -62,6 +70,7 @@ public class EvaluationService {
                 .totalEvaluation(totalEvaluation)
                 .totalGain(totalGain)
                 .totalReturnRate(totalReturnRate)
+                .priceSourceCounts(priceSourceCounts)
                 .build();
     }
 
@@ -93,6 +102,7 @@ public class EvaluationService {
                 .evaluationAmount(evalAmount)
                 .evaluationGain(evalGain)
                 .returnRate(returnRate)
+                .priceSource(stock.getPriceSource())
                 .build();
     }
 
