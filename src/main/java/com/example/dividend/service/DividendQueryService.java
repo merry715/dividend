@@ -35,7 +35,7 @@ public class DividendQueryService {
         }
 
         List<Dividend> dividends =
-                dividendRepository.findByStockIdOrderByYearDescPaymentMonthAsc(stockId);
+                dividendRepository.findByStockIdOrderByYearDescMonthAsc(stockId);
 
         List<DividendItem> items = dividends.stream()
                 .map(d -> toItem(d, stock.getQuantity()))
@@ -63,7 +63,7 @@ public class DividendQueryService {
         return DividendItem.builder()
                 .id(d.getId())
                 .year(d.getYear())
-                .paymentMonth(d.getPaymentMonth())
+                .paymentMonth(d.getMonth())
                 .exDividendDate(d.getExDividendDate())
                 .paymentDate(d.getPaymentDate())
                 .status(d.getStatus())
