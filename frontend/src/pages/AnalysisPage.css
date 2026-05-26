@@ -1,0 +1,478 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ── 페이지 루트: 뷰포트 100% 꽉 채움 ── */
+.ap-page {
+  font-family: 'Outfit', sans-serif;
+  color: #333;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* ── 로딩 ── */
+.ap-page.ap-loading {
+  justify-content: center;
+  align-items: center;
+  color: #aaa;
+  font-size: 13px;
+}
+
+/* ── 헤더 ── */
+.ap-header   { flex-shrink: 0; }
+.ap-title    { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin: 0 0 2px; color: #333; }
+.ap-subtitle { font-size: 12px; color: #666; margin: 0; }
+
+/* ── 카드 공통 ── */
+.ap-card {
+  background: #f9f9f9;
+  border: 1px solid #ebebeb;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.ap-card-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+  flex-shrink: 0;
+}
+
+/* ── 연간 목표 카드 (상단 고정 높이) ── */
+.ap-goal-card {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.ap-goal-left  { flex: 3; padding-right: 24px; }
+.ap-goal-right { flex: 2; padding-left: 24px; }
+
+.ap-goal-divider {
+  width: 1px;
+  align-self: stretch;
+  background: #ebebeb;
+  flex-shrink: 0;
+}
+
+.ap-goal-amounts {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.ap-goal-sep { font-size: 18px; color: #ddd; line-height: 1; }
+
+.ap-goal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ap-goal-item-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ap-goal-item-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #333;
+  letter-spacing: -0.4px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.ap-goal-item-val.accent { color: #1D9E75; }
+
+.ap-goal-item-unit { font-size: 12px; font-weight: 500; color: #bbb; }
+
+.ap-goal-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.ap-goal-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ap-goal-bar-fill {
+  height: 100%;
+  background: #1D9E75;
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ap-goal-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1D9E75;
+  min-width: 38px;
+  text-align: right;
+}
+
+.ap-goal-eta { font-size: 11px; color: #bbb; margin: 0; }
+
+.ap-goal-input-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.ap-goal-input-row { display: flex; gap: 8px; }
+
+.ap-goal-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.ap-goal-input:focus { border-color: #1D9E75; }
+
+.ap-goal-save-btn {
+  height: 36px;
+  padding: 0 18px;
+  background: #1D9E75;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.ap-goal-save-btn:hover { background: #189068; }
+
+/* ── 포트폴리오 요약 카드 4개 (중단 고정 높이) ── */
+.ap-portfolio-row {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+}
+
+.ap-port-card { flex: 1; }
+
+.ap-port-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 6px;
+}
+
+.ap-port-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #333;
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.ap-port-unit { font-size: 11px; font-weight: 500; color: #bbb; }
+
+.ap-port-sub { font-size: 11px; font-weight: 600; margin: 0; }
+
+.ap-port-sub.profit  { color: #639922; }
+.ap-port-sub.loss    { color: #E24B4A; }
+.ap-port-sub.neutral { color: #999; }
+
+/* ════════════════════════════════════════
+   하단 메인 영역: flex:1, 남은 공간 전부
+════════════════════════════════════════ */
+.ap-bottom-row {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+/* ── 좌측 45%: 종목·섹터 비중 ── */
+.ap-weight-card {
+  flex: 0 0 45%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ap-weight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.ap-weight-tabs { display: flex; gap: 4px; }
+
+.ap-weight-tab {
+  padding: 4px 12px;
+  border: 1px solid #e0e0e0;
+  background: transparent;
+  color: #aaa;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.ap-weight-tab:hover  { border-color: #ccc; color: #888; }
+.ap-weight-tab.active { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+
+/* 도넛(좌) + 리스트(우) 가로 배치, 남은 높이 전부 채움 */
+.ap-weight-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+}
+
+/* 도넛: 컨테이너 높이에 맞게 자동으로 커짐 */
+.ap-donut-wrap {
+  flex-shrink: 0;
+  align-self: stretch;
+  aspect-ratio: 1;
+  max-width: 220px;
+  max-height: 220px;
+  min-width: 80px;
+  min-height: 80px;
+  position: relative;
+}
+
+.ap-weight-list {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.ap-weight-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ap-weight-rank {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ccc;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.ap-weight-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ap-weight-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  flex-shrink: 0;
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+.ap-weight-bar-bg {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ap-weight-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.ap-weight-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+  flex-shrink: 0;
+  width: 40px;
+  text-align: right;
+}
+
+/* ── 우측 55%: 연도별 비교 차트 ── */
+.ap-yearly-card {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ap-yearly-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.ap-yearly-head .ap-card-title { margin: 0; }
+
+.ap-yearly-growth {
+  font-size: 11px;
+  font-weight: 700;
+  color: #639922;
+  white-space: nowrap;
+}
+
+/* 차트가 남은 높이 전체를 채움 */
+.ap-bar-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* ════════════════════════════════════════
+   반응형 — 태블릿 (768px 이하)
+════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* 하단 영역: 가로→세로 전환 */
+  .ap-bottom-row {
+    flex-direction: column;
+    flex: unset;
+    flex-shrink: 0;
+  }
+
+  .ap-weight-card {
+    flex: unset;
+    flex-shrink: 0;
+  }
+
+  .ap-yearly-card {
+    flex: unset;
+    flex-shrink: 0;
+    height: 220px;
+  }
+
+  /* 도넛 + 리스트: 세로 배치 */
+  .ap-weight-body {
+    flex: unset;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .ap-donut-wrap {
+    align-self: auto;
+    width: clamp(180px, 50%, 260px);
+    height: auto;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: 1;
+  }
+
+  .ap-weight-list {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* 페이지 스크롤 허용 */
+  .ap-page {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100%;
+  }
+
+}
+
+/* ════════════════════════════════════════
+   반응형 — 모바일 (480px 이하)
+════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  .ap-page { gap: 8px; }
+
+  .ap-card { padding: 12px 14px; }
+
+  .ap-title    { font-size: 17px; }
+  .ap-subtitle { font-size: 11px; }
+
+  /* 목표 카드: 세로 배치 */
+  .ap-goal-card { flex-direction: column; align-items: stretch; gap: 0; }
+  .ap-goal-left  { padding-right: 0; padding-bottom: 14px; }
+  .ap-goal-right { padding-left: 0; padding-top: 14px; }
+  .ap-goal-divider { width: 100%; height: 1px; align-self: auto; }
+  .ap-goal-item-val { font-size: 16px; }
+  .ap-goal-amounts  { gap: 12px; }
+
+  /* 포트폴리오: 2×2 */
+  .ap-portfolio-row { flex-wrap: wrap; gap: 8px; }
+  .ap-port-card { flex: 0 0 calc(50% - 4px); }
+  .ap-port-label { font-size: 9px; }
+  .ap-port-value { font-size: 15px; }
+
+  /* 도넛 */
+  .ap-donut-wrap { width: clamp(160px, 65%, 240px); }
+
+  /* 리스트 */
+  .ap-weight-list { gap: 8px; }
+  .ap-weight-name { font-size: 11px; min-width: 68px; }
+  .ap-weight-pct  { font-size: 11px; width: 36px; }
+  .ap-weight-rank { font-size: 10px; }
+
+  /* 연도별 차트 */
+  .ap-yearly-card { height: 180px; }
+
+  .ap-weight-tab { padding: 4px 10px; font-size: 10px; }
+
+}

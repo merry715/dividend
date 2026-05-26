@@ -1,0 +1,49 @@
+/* 회원가입 완료 모달 */
+.sp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.sp-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 340px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-family: 'Outfit', sans-serif;
+}
+
+.sp-modal__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #E1F5EE;
+  color: #1D9E75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.sp-modal__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.sp-modal__desc {
+  font-size: 13px;
+  color: #999;
+  line-height: 1.7;
+  margin: 0 0 4px;
+}

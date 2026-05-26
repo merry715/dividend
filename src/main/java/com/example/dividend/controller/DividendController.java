@@ -8,6 +8,7 @@ import com.example.dividend.service.DividendService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -71,5 +72,10 @@ public class DividendController {
     public ApiResponse<List<Map<String, Object>>> getYearly(
             @AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(dividendService.getYearly(userId));
+    }
+    // 직접 추가
+    @GetMapping
+    public ApiResponse<List<Dividend>> getAll() {
+        return ApiResponse.ok(dividendService.getAll());
     }
 }

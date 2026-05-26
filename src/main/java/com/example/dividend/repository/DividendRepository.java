@@ -79,4 +79,8 @@ public interface DividendRepository extends JpaRepository<Dividend, Long> {
         ORDER BY avg_amount DESC
         """, nativeQuery = true)
     List<Object[]> findAvgDividendByStock();
+           // dev에서 가져옴
+    List<Dividend> findByYear(int year);
+    
+    List<Dividend> findByStockIdOrderByYearDescPaymentMonthAsc(Long stockId);
 }

@@ -34,11 +34,8 @@ public class DividendQueryService {
             throw new AccessForbiddenException("해당 종목에 접근할 권한이 없습니다");
         }
 
-        List<Dividend> dividends = dividendRepository.findByStockId(stockId).stream()
-                .sorted(java.util.Comparator
-                        .comparingInt(Dividend::getYear).reversed()
-                        .thenComparingInt(Dividend::getMonth))
-                .toList();
+        List<Dividend> dividends =
+                dividendRepository.findByStockIdOrderByYearDescPaymentMonthAsc(stockId);
 
         List<DividendItem> items = dividends.stream()
                 .map(d -> toItem(d, stock.getQuantity()))
@@ -66,7 +63,7 @@ public class DividendQueryService {
         return DividendItem.builder()
                 .id(d.getId())
                 .year(d.getYear())
-                .paymentMonth(d.getMonth())
+                .paymentMonth(d.getPaymentMonth())
                 .exDividendDate(d.getExDividendDate())
                 .paymentDate(d.getPaymentDate())
                 .status(d.getStatus())
