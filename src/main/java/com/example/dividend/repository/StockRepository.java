@@ -37,4 +37,25 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     // 전체 목록 조회 시 User를 fetch join — StockResponse.from()에서 getUser() 호출 시 추가 쿼리 방지
     @Query("SELECT s FROM Stock s JOIN FETCH s.user WHERE s.user.id = :userId")
     List<Stock> findByUser_IdWithUser(@Param("userId") Long userId);
+
+    // 많이 등록된 종목 Top 10 (전체 사용자) — [stock_code, stock_name, count]
+    @Query(value = """
+        SELECT stock_code, stock_name, COUNT(*) AS cnt
+        FROM stock
+        WHERE deleted_at IS NULL
+        GROUP BY stock_code, stock_name
+        ORDER BY cnt DESC
+        LIMIT 10
+        """, nativeQuery = true)
+    List<Object[]> findTop10Stocks();
+
+    // 전체 사용자 섹터 비중 — [sector, count]
+    @Query(value = """
+        SELECT sector, COUNT(*) AS cnt
+        FROM stock
+        WHERE deleted_at IS NULL
+        GROUP BY sector
+        ORDER BY cnt DESC
+        """, nativeQuery = true)
+    List<Object[]> findSectorDistribution();
 }
