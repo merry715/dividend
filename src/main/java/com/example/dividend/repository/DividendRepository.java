@@ -82,5 +82,5 @@ public interface DividendRepository extends JpaRepository<Dividend, Long> {
            // dev에서 가져옴
     List<Dividend> findByYear(int year);
     
-    List<Dividend> findByStockIdOrderByYearDescPaymentMonthAsc(Long stockId);
+    List<Dividend> findByStockIdOrderByYearDescMonthAsc(Long stockId);
 }
