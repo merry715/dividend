@@ -39,3 +39,8 @@ out/
 ### Claude / OMC ###
 .claude/
 .omc/
+
+### Environment variables ###
+.env
+.env.local
+.env.*.local
