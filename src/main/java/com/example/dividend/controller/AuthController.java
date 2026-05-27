@@ -50,8 +50,8 @@ public class AuthController {
 
     // 내 정보 조회
     @GetMapping("/me")
-    public ApiResponse<UserResponse> me(@AuthenticationPrincipal String email) {
-        return ApiResponse.ok(authService.getMe(email), "사용자 정보 조회 성공");
+    public ApiResponse<UserResponse> me(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(authService.getMe(userId), "사용자 정보 조회 성공");
     }
 
     // Access Token 재발급

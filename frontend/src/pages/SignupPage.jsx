@@ -56,7 +56,11 @@ export default function SignupPage() {
     setErrors({})
     setLoading(true)
     try {
-      await signup(form.name, form.email, form.password)
+      const { data } = await signup(form.name, form.email, form.password)
+      if (!data.success) {
+        showToast(data.message || '회원가입에 실패했습니다. 다시 시도해 주세요.')
+        return
+      }
       setSuccess(true)
     } catch (err) {
       showToast(err.response?.data?.message || '회원가입에 실패했습니다. 다시 시도해 주세요.')
