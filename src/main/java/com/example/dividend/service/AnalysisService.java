@@ -81,8 +81,7 @@ public class AnalysisService {
             return List.of();
         }
 
-        List<Long> stockIds = stocks.stream().map(Stock::getId).toList();
-        List<Dividend> dividends = dividendRepository.findByStockIdIn(stockIds);
+        List<Dividend> dividends = dividendRepository.findByUserId(userId);
 
         Map<Integer, Integer> byYear = new TreeMap<>(Comparator.reverseOrder());
         for (Dividend d : dividends) {
