@@ -63,4 +63,11 @@ public class Stock extends BaseEntity {
     /** 주당 예상 배당금 */
     @Column(name = "expected_dividend_per_share")
     private Integer expectedDividendPerShare;
+
+    /**
+     * 마지막 전일 종가의 데이터 출처.
+     * "yfinance" | "cache" | "avg_purchase" | "unavailable" | null(미업데이트)
+     */
+    @Column(name = "price_source", length = 20)
+    private String priceSource;
 }

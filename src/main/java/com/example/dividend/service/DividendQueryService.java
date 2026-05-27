@@ -35,7 +35,7 @@ public class DividendQueryService {
         }
 
         List<Dividend> dividends =
-                dividendRepository.findByStockIdOrderByYearDescPaymentMonthAsc(stockId);
+                dividendRepository.findByStockIdOrderByYearDescMonthAsc(stockId);
 
         List<DividendItem> items = dividends.stream()
                 .map(d -> toItem(d, stock.getQuantity()))
@@ -55,19 +55,20 @@ public class DividendQueryService {
     }
 
     private DividendItem toItem(Dividend d, int quantity) {
-        int perShare = "CONFIRMED".equals(d.getStatus())
-                ? d.getConfirmedDividend()
-                : d.getExpectedDividend();
+        long totalAmount = "CONFIRMED".equals(d.getStatus()) && d.getConfirmedAmount() != null
+                ? d.getConfirmedAmount().longValue()
+                : (d.getExpectedAmount() != null ? d.getExpectedAmount().longValue() : 0L);
+        int perShare = quantity > 0 ? (int) (totalAmount / quantity) : 0;
 
         return DividendItem.builder()
                 .id(d.getId())
                 .year(d.getYear())
-                .paymentMonth(d.getPaymentMonth())
+                .paymentMonth(d.getMonth())
                 .exDividendDate(d.getExDividendDate())
                 .paymentDate(d.getPaymentDate())
                 .status(d.getStatus())
                 .perShareDividend(perShare)
-                .estimatedReceive(perShare * quantity)
+                .estimatedReceive((int) totalAmount)
                 .build();
     }
 

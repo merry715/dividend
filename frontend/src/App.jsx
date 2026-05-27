@@ -4,10 +4,12 @@ import Sidebar from './components/Layout/Sidebar'
 import Topbar from './components/Layout/Topbar'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
-import DashboardPage    from './pages/DashboardPage'
-import StocksPage       from './pages/StocksPage'
-import TransactionsPage from './pages/TransactionsPage'
-import AdminPage        from './pages/AdminPage'
+import AnalysisPage from './pages/AnalysisPage'
+import DividendPage from './pages/DividendPage'
+import AdminPage from './pages/AdminPage'
+import TradePage from './pages/TradePage'
+import StockPage from './pages/StockPage'
+import DashboardPage from './pages/DashboardPage'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('accessToken')
@@ -46,10 +48,10 @@ export default function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route element={<PrivateRoute><MainLayout collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} /></PrivateRoute>}>
           <Route path="/dashboard"    element={<DashboardPage />} />
-          <Route path="/stocks"       element={<StocksPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/dividends"    element={<div />} />
-          <Route path="/analysis"     element={<div />} />
+          <Route path="/stocks"       element={<StockPage />} />
+          <Route path="/transactions" element={<TradePage />} />
+          <Route path="/dividends"    element={<DividendPage />} />
+          <Route path="/analysis"     element={<AnalysisPage />} />
           <Route path="/rebalancing"  element={<div />} />
           <Route path="/admin"        element={<AdminPage />} />
         </Route>
