@@ -46,7 +46,8 @@ public class DashboardService {
 
         Map<Long, Integer> dividendMap = new HashMap<>();
         for (Dividend d : dividendRepository.findAll()) {
-            dividendMap.merge(d.getStockId(), d.getExpectedDividend(), Integer::sum);
+            int amt = d.getExpectedAmount() != null ? d.getExpectedAmount().intValue() : 0;
+            dividendMap.merge(d.getStockId(), amt, Integer::sum);
         }
 
         List<HoldingDto> result = new ArrayList<>();
@@ -54,7 +55,7 @@ public class DashboardService {
             Long stockId = entry.getKey();
             int quantity = entry.getValue();
             int totalInvestment = investmentMap.getOrDefault(stockId, 0);
-            int expectedDividend = dividendMap.getOrDefault(stockId, 0) * quantity;
+            int expectedDividend = dividendMap.getOrDefault(stockId, 0);
             int averagePrice = quantity > 0 ? totalInvestment / quantity : 0;
 
             String stockName = stockRepository.findById(stockId)
@@ -81,8 +82,8 @@ public class DashboardService {
         for (int i = 1; i <= 12; i++) monthlyMap.put(i, 0);
 
         for (Dividend d : dividendRepository.findAll()) {
-            int quantity = quantityMap.getOrDefault(d.getStockId(), 0);
-            monthlyMap.merge(d.getPaymentMonth(), quantity * d.getExpectedDividend(), Integer::sum);
+            int amt = d.getExpectedAmount() != null ? d.getExpectedAmount().intValue() : 0;
+            monthlyMap.merge(d.getMonth(), amt, Integer::sum);
         }
 
         List<MonthlyDividendDto> result = new ArrayList<>();

@@ -52,6 +52,7 @@ export default function App() {
           <Route path="/transactions" element={<TradePage />} />
           <Route path="/dividends"    element={<DividendPage />} />
           <Route path="/analysis"     element={<AnalysisPage />} />
+          <Route path="/rebalancing"  element={<div />} />
           <Route path="/admin"        element={<AdminPage />} />
         </Route>
       </Routes>

@@ -13,7 +13,7 @@ public class DividendConfirmRequest {
 
     @NotNull(message = "확정 배당금은 필수입니다")
     @Positive(message = "확정 배당금은 양수여야 합니다")
-    private Integer confirmedDividend;
+    private Long confirmedAmount;
 
     @NotNull(message = "지급일은 필수입니다")
     private LocalDate paymentDate;

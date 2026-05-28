@@ -27,4 +27,10 @@ public class EvaluationResponse {
 
     /** 수익률(%), 소수점 2자리. 투자 원금 0이거나 종가 없으면 null */
     private BigDecimal returnRate;
+
+    /**
+     * 현재 전일 종가의 데이터 출처.
+     * "yfinance" | "cache" | "avg_purchase" | "unavailable" | null(미업데이트)
+     */
+    private String priceSource;
 }
