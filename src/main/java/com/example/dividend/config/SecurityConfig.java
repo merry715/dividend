@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login",
                         "/api/v1/auth/logout", "/api/v1/auth/refresh", "/api/v1/health").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .anyRequest().hasRole("USER")
+                .anyRequest().hasAnyRole("USER", "ADMIN")
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
