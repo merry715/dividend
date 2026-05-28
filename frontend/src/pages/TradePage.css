@@ -23,6 +23,7 @@
   border-radius: 14px;
   padding: 14px 16px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .tp-card-title {
@@ -378,4 +379,48 @@
   padding: 32px 0;
   color: #bbb;
   font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .tp-page {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .tp-top-row {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .tp-chart-card {
+    height: 160px;
+  }
+
+  .tp-form-row {
+    flex-wrap: wrap;
+  }
+
+  .tp-fi-name,
+  .tp-fi-sm,
+  .tp-fi-md,
+  .tp-fi-date {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 100px;
+  }
+
+  .tp-table-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .tp-table-section {
+    flex: none;
+    height: 380px;
+  }
+
+  .tp-table-wrap {
+    overflow-x: auto;
+  }
 }

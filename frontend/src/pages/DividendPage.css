@@ -25,6 +25,7 @@
   border-radius: 14px;
   padding: 14px 16px;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .dp-card-title {
@@ -324,3 +325,42 @@
 
 .dp-month-tag.confirmed { background: #E1F5EE; color: #1D9E75; }
 .dp-month-tag.expected  { background: #f0f0f0; color: #aaa;    }
+
+@media (max-width: 768px) {
+  .dp-page {
+    overflow: visible;
+    height: auto;
+    min-height: 100%;
+  }
+
+  .dp-monthly-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dp-convert-row {
+    flex-wrap: wrap;
+  }
+
+  .dp-fi-amount {
+    flex: 1 1 100%;
+  }
+
+  .dp-summary-row {
+    flex-wrap: wrap;
+  }
+
+  .dp-card {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .dp-monthly-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dp-sum-card {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 130px;
+  }
+}

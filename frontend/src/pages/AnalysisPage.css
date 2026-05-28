@@ -30,6 +30,7 @@
   border: 1px solid #ebebeb;
   border-radius: 14px;
   padding: 14px 16px;
+  box-sizing: border-box;
 }
 
 .ap-card-title {
@@ -386,6 +387,47 @@
 ════════════════════════════════════════ */
 @media (max-width: 768px) {
 
+  /* 페이지 스크롤 허용 */
+  .ap-page {
+    overflow: visible;
+    height: auto;
+    min-height: 100%;
+  }
+
+  /* 목표 카드: 세로 배치 (버튼 잘림 방지) */
+  .ap-goal-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .ap-goal-left {
+    padding-right: 0;
+    padding-bottom: 14px;
+  }
+
+  .ap-goal-right {
+    padding-left: 0;
+    padding-top: 14px;
+  }
+
+  .ap-goal-divider {
+    width: 100%;
+    height: 1px;
+    align-self: auto;
+  }
+
+  /* 포트폴리오 요약 카드: 2×2 */
+  .ap-portfolio-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ap-port-card {
+    flex: 0 0 calc(50% - 4px);
+    box-sizing: border-box;
+  }
+
   /* 하단 영역: 가로→세로 전환 */
   .ap-bottom-row {
     flex-direction: column;
@@ -424,13 +466,6 @@
   .ap-weight-list {
     width: 100%;
     justify-content: flex-start;
-  }
-
-  /* 페이지 스크롤 허용 */
-  .ap-page {
-    overflow-y: auto;
-    overflow-x: hidden;
-    height: 100%;
   }
 
 }
