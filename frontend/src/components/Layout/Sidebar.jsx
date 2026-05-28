@@ -65,24 +65,12 @@ const AnalysisIcon = () => (
   </svg>
 )
 
-const RebalancingIcon = () => (
-  <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <line x1="2" y1="5" x2="16" y2="5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <line x1="2" y1="13" x2="16" y2="13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <circle cx="6" cy="5" r="2" fill="currentColor" />
-    <circle cx="12" cy="9" r="2" fill="currentColor" />
-    <circle cx="7" cy="13" r="2" fill="currentColor" />
-  </svg>
-)
-
 const navItems = [
   { path: '/dashboard',    label: '대시보드', icon: DashboardIcon   },
   { path: '/stocks',       label: '종목관리', icon: StocksIcon      },
   { path: '/transactions', label: '거래관리', icon: TradesIcon      },
   { path: '/dividends',    label: '배당관리', icon: DividendsIcon   },
   { path: '/analysis',     label: '분석',     icon: AnalysisIcon    },
-  { path: '/rebalancing',  label: '리밸런싱', icon: RebalancingIcon },
 ]
 
 const TIPS = [
