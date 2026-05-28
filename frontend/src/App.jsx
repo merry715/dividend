@@ -4,6 +4,7 @@ import Sidebar from './components/Layout/Sidebar'
 import Topbar from './components/Layout/Topbar'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import AnalysisPage from './pages/AnalysisPage'
 import DividendPage from './pages/DividendPage'
 import AdminPage from './pages/AdminPage'
 import TradePage from './pages/TradePage'
@@ -50,8 +51,7 @@ export default function App() {
           <Route path="/stocks"       element={<StockPage />} />
           <Route path="/transactions" element={<TradePage />} />
           <Route path="/dividends"    element={<DividendPage />} />
-          <Route path="/analysis"     element={<div />} />
-          <Route path="/rebalancing"  element={<div />} />
+          <Route path="/analysis"     element={<AnalysisPage />} />
           <Route path="/admin"        element={<AdminPage />} />
         </Route>
       </Routes>
