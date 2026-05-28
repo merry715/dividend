@@ -31,7 +31,7 @@ export const getDividends = () =>
   useMock ? mockGetDividends() : api.get('/dividends')
 
 export const confirmDividend = (id, body) =>
-  useMock ? mockConfirmDividend(id, body) : api.patch(`/dividends/${id}`, body)
+  useMock ? mockConfirmDividend(id, body) : api.patch(`/dividends/${id}/confirm`, body)
 
-export const generateDividends = (year) =>
-  useMock ? mockGenerateDividends(year) : api.post('/dividends/generate', { year })
+export const generateDividends = (stockId, year) =>
+  useMock ? mockGenerateDividends(year) : api.post('/dividends/generate', { stockId, year })
