@@ -11,6 +11,8 @@ import {
   getSummary, getStockWeight, getSectorWeight,
   getDividendHistory, getGoal, saveGoal,
 } from '../api/analysis'
+import { getStocks } from '../api/stocks'
+import { getCumulative } from '../api/dividend'
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -19,6 +21,8 @@ const WEIGHT_COLORS = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#B8E4D4', '#DDF0E9', '#
 
 export default function AnalysisPage() {
   const [summary, setSummary]               = useState(null)
+  const [stocks, setStocks]                 = useState([])
+  const [cumulativeAmount, setCumulativeAmount] = useState(0)
   const [stockWeights, setStockWeights]     = useState([])
   const [sectorWeights, setSectorWeights]   = useState([])
   const [dividendHistory, setDividendHistory] = useState([])
@@ -31,21 +35,25 @@ export default function AnalysisPage() {
 
   const loadAll = useCallback(async () => {
     try {
-      const [summaryRes, stockRes, sectorRes, historyRes, goalRes] = await Promise.all([
+      const [summaryRes, stockRes, sectorRes, historyRes, goalRes, stocksRes, cumulativeRes] = await Promise.all([
         getSummary(),
         getStockWeight(),
         getSectorWeight(),
         getDividendHistory(),
         getGoal(),
+        getStocks(),
+        getCumulative(),
       ])
       setSummary(summaryRes.data.data)
-      setStockWeights(stockRes.data.data.map((w, i) => ({
+      setStocks(stocksRes.data.data ?? [])
+      setCumulativeAmount(cumulativeRes.data.data?.totalConfirmedAmount ?? 0)
+      setStockWeights((stockRes.data.data ?? []).map((w, i) => ({
         ...w, color: WEIGHT_COLORS[i] ?? '#C8EFE3',
       })))
-      setSectorWeights(sectorRes.data.data.map((w, i) => ({
+      setSectorWeights((sectorRes.data.data ?? []).map((w, i) => ({
         ...w, color: WEIGHT_COLORS[i] ?? '#C8EFE3',
       })))
-      setDividendHistory(historyRes.data.data)
+      setDividendHistory([...(historyRes.data.data ?? [])].sort((a, b) => a.year - b.year))
       const g = goalRes.data.data
       setGoal(g)
       setGoalInput(String(g?.targetDividend ?? ''))
@@ -64,7 +72,8 @@ export default function AnalysisPage() {
     if (!num || num <= 0) return
     setSaving(true)
     try {
-      const res = await saveGoal(num, goalId)
+      await saveGoal(num)
+      const res = await getGoal()
       const g = res.data.data
       setGoal(g)
       if (g?.id) setGoalId(g.id)
@@ -78,8 +87,8 @@ export default function AnalysisPage() {
   // 비중 리스트 — 탭에 따라 stockName / sector 필드 통일
   const activeWeights = (weightTab === 'stock' ? stockWeights : sectorWeights).map((w, i) => ({
     rank:   i + 1,
-    name:   w.stockName ?? w.sector,
-    weight: w.weight,
+    name:   w.stockName ?? w.sectorLabel,
+    weight: w.weightPercent,
     color:  w.color,
   }))
 
@@ -154,12 +163,17 @@ export default function AnalysisPage() {
   }
 
   // 파생 값
-  const progressPct  = goal ? Math.min(100, Math.round(goal.achievementRate)) : 0
-  const monthsToGoal = goal?.timeToGoal ?? 0
-  const pnl    = summary?.evaluationProfit ?? 0
-  const pnlPct = summary?.totalInvestment
-    ? ((pnl / summary.totalInvestment) * 100).toFixed(2)
+  const progressPct    = goal ? Math.min(100, Math.floor(goal.achievementRate)) : 0
+  const monthsToGoal   = goal?.estimatedMonthsToGoal ?? 0
+  const totalEvalAmount = stocks.reduce((sum, s) => sum + Number(s.evaluationAmount ?? 0), 0)
+  const pnl             = stocks.reduce((sum, s) => sum + Number(s.evaluationProfit ?? 0), 0)
+  const totalInvestment = Number(summary?.totalInvestment ?? 0)
+  const pnlPct = totalInvestment > 0
+    ? ((pnl / totalInvestment) * 100).toFixed(2)
     : '0.00'
+  const dividendYield = totalInvestment > 0
+    ? ((summary.totalExpectedDividend / totalInvestment) * 100).toFixed(1)
+    : '0.0'
   const lastTwo   = dividendHistory.slice(-2)
   const yoyGrowth = lastTwo.length === 2 && lastTwo[0].totalDividend > 0
     ? (((lastTwo[1].totalDividend / lastTwo[0].totalDividend) - 1) * 100).toFixed(1)
@@ -188,7 +202,7 @@ export default function AnalysisPage() {
             <div className="ap-goal-item">
               <span className="ap-goal-item-label">예상 배당금</span>
               <span className="ap-goal-item-val">
-                {fmt(goal?.expectedDividend ?? 0)}<span className="ap-goal-item-unit">원</span>
+                {fmt(goal?.currentDividend ?? 0)}<span className="ap-goal-item-unit">원</span>
               </span>
             </div>
             <span className="ap-goal-sep">/</span>
@@ -210,6 +224,8 @@ export default function AnalysisPage() {
           <p className="ap-goal-eta">
             {progressPct >= 100
               ? '연간 목표를 달성했습니다!'
+              : !goal?.targetDividend
+              ? '목표를 설정해 주세요'
               : `달성 예상 기간: 약 ${monthsToGoal}개월 후`}
           </p>
         </div>
@@ -242,28 +258,26 @@ export default function AnalysisPage() {
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">총 투자금</p>
-          <p className="ap-port-value">{fmt(summary?.totalInvestment ?? 0)}<span className="ap-port-unit">원</span></p>
-          <p className={`ap-port-sub ${pnl >= 0 ? 'profit' : 'loss'}`}>
-            {pnl >= 0 ? '+' : ''}{fmt(pnl)}원
-          </p>
+          <p className="ap-port-value">{fmt(totalInvestment)}<span className="ap-port-unit">원</span></p>
+          <p className="ap-port-sub">{summary?.stockCount ?? 0}개 종목</p>
         </div>
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">평가금액</p>
-          <p className="ap-port-value">{fmt(summary?.evaluationAmount ?? 0)}<span className="ap-port-unit">원</span></p>
+          <p className="ap-port-value">{fmt(totalEvalAmount)}<span className="ap-port-unit">원</span></p>
           <p className={`ap-port-sub ${pnl >= 0 ? 'profit' : 'loss'}`}>
-            {pnl >= 0 ? '+' : ''}{pnlPct}% 수익
+            {pnl >= 0 ? '+' : ''}{fmt(pnl)}원 ({pnl >= 0 ? '+' : ''}{pnlPct}%)
           </p>
         </div>
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">배당수익률</p>
-          <p className="ap-port-value">{(summary?.dividendYield ?? 0).toFixed(1)}<span className="ap-port-unit">%</span></p>
+          <p className="ap-port-value">{dividendYield}<span className="ap-port-unit">%</span></p>
         </div>
 
         <div className="ap-card ap-port-card">
           <p className="ap-port-label">누적 배당</p>
-          <p className="ap-port-value">{fmt(summary?.cumulativeDividend ?? 0)}<span className="ap-port-unit">원</span></p>
+          <p className="ap-port-value">{fmt(cumulativeAmount)}<span className="ap-port-unit">원</span></p>
         </div>
 
       </div>

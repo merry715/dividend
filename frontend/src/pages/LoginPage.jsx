@@ -34,6 +34,10 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const { data } = await login(email, password)
+      if (!data.success) {
+        showToast(data.message || '로그인에 실패했습니다. 다시 시도해 주세요.')
+        return
+      }
       localStorage.setItem('accessToken', data.data.accessToken)
       localStorage.setItem('refreshToken', data.data.refreshToken)
       const meRes = await getMe()
