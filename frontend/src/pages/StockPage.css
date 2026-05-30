@@ -99,7 +99,7 @@
   flex-shrink: 0;
 }
 
-.sp-input.name  { width: 100%; }
+.sp-input.name  { width: 100%; box-sizing: border-box; }
 .sp-input.qty   { width: 90px;  flex-shrink: 0; }
 .sp-input.price { width: 110px; flex-shrink: 0; }
 .sp-select      { flex: 1; min-width: 90px; }
