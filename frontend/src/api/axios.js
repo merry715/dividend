@@ -29,7 +29,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       try {
-        const { data } = await axios.post('/api/v1/auth/refresh', { refreshToken });
+        const { data } = await axios.post(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
         if (!data.success || !data.data?.accessToken) {
           clearAuth();
           window.location.href = '/';
