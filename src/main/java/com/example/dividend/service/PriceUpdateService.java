@@ -36,7 +36,10 @@ public class PriceUpdateService {
 
             stock.setPriceSource(result.getSource());
 
-            if (result.isPriceAvailable()) {
+            // avg_purchase fallback은 현재가로 표시하지 않음 (평균단가=현재가 혼동 방지)
+            boolean isRealPrice = PriceResult.SOURCE_YFINANCE.equals(result.getSource())
+                    || PriceResult.SOURCE_CACHE.equals(result.getSource());
+            if (isRealPrice && result.getPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 stock.setPreviousClose(result.getPrice());
             }
             // unavailable이어도 priceSource는 기록 (기존 previousClose 유지)
