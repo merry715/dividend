@@ -57,10 +57,12 @@ export default function DividendPage() {
       setDividendList(dividendData)
       setStocks(stockList)
 
-      // 올해 배당 레코드 없으면 자동 생성
+      // 올해 배당 없는 종목만 자동 생성 (연중 추가 종목 누락 방지)
       const thisYearDividends = dividendData.filter(d => d.year === CURRENT_YEAR)
-      if (thisYearDividends.length === 0 && autoGenerate && stockList.length > 0) {
-        await Promise.all(stockList.map(s => generateDividends(s.id, CURRENT_YEAR)))
+      const haveDividend = new Set(thisYearDividends.map(d => d.stockId))
+      const needGenerate = stockList.filter(s => s.quantity > 0 && !haveDividend.has(s.id))
+      if (needGenerate.length > 0 && autoGenerate) {
+        await Promise.all(needGenerate.map(s => generateDividends(s.id, CURRENT_YEAR)))
         return loadAll(false)
       }
     } catch (e) {
