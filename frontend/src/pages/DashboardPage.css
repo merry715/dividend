@@ -1,0 +1,368 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ─────────────────────────────────────────────
+   페이지 루트: 100% 채우고 flex 열 배치
+───────────────────────────────────────────── */
+.db-page {
+  font-family: 'Outfit', sans-serif;
+  color: #333333;
+  height: 100%;           /* App.jsx main이 100vh이므로 꽉 채움 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   헤더
+───────────────────────────────────────────── */
+.db-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.db-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin: 0 0 2px;
+  color: #333333;
+}
+
+.db-subtitle {
+  font-size: 12px;
+  color: #666666;
+  margin: 0;
+}
+
+.db-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.db-date-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1D9E75;
+  background: #E1F5EE;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.db-total-block {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.db-total-label {
+  font-size: 11px;
+  color: #999;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.db-total-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #333333;
+}
+
+.db-unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+  margin-left: 1px;
+}
+
+/* ─────────────────────────────────────────────
+   카드 공통
+───────────────────────────────────────────── */
+.db-card {
+  background: #f9f9f9;
+  border: 1px solid #ebebeb;
+  border-radius: 14px;
+  padding: 14px 16px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.db-card-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+  flex-shrink: 0;
+}
+
+.db-card-title-sub {
+  font-size: 10px;
+  color: #ccc;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+}
+
+/* ─────────────────────────────────────────────
+   중간 그리드: 도넛(45%) + 수익현황(55%)
+───────────────────────────────────────────── */
+.db-main-grid {
+  flex: 1;          /* 헤더·하단 차트 제외한 공간 전부 차지 */
+  min-height: 0;    /* flex 자식이 부모보다 커지지 않도록 */
+  display: flex;
+  gap: 12px;
+}
+
+/* ─────────────────────────────────────────────
+   도넛 카드
+───────────────────────────────────────────── */
+.db-donut-card {
+  width: 45%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-donut-wrap {
+  flex: 1;          /* 카드 내 남은 세로 공간 전부 */
+  min-height: 0;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.db-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.db-donut-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #bbb;
+  margin-bottom: 2px;
+}
+
+.db-donut-amount {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #333333;
+}
+
+.db-donut-unit {
+  font-size: 11px;
+  font-weight: 500;
+  color: #aaa;
+  margin-left: 2px;
+}
+
+/* 범례: 가로 배치 */
+.db-legend {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  flex-shrink: 0;
+}
+
+.db-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.db-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.db-legend-name {
+  font-size: 11px;
+  color: #666666;
+}
+
+.db-legend-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #333333;
+}
+
+/* ─────────────────────────────────────────────
+   수익현황 컬럼 (3개 카드 세로 쌓기)
+───────────────────────────────────────────── */
+.db-stats-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.db-stat-card {
+  flex: 1;
+  min-height: 0;
+  background: #f9f9f9;
+  border: 1px solid #ebebeb;
+  border-radius: 12px;
+  padding: 1.6rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.db-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.db-stat-value {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: #333333;
+  flex-shrink: 0;
+}
+
+.db-stat-card--savings .db-stat-value { font-size: 3.5rem; }
+.db-stat-card--dividend .db-stat-value { font-size: 3rem; }
+.db-stat-card--goal .db-stat-value    { font-size: 3.2rem; }
+
+.db-stat-value.profit {
+  color: #1D9E75;
+}
+
+.db-stat-unit {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #aaa;
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+
+.db-stat-meta {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #999;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.db-stat-meta-green {
+  color: #1D9E75;
+  font-weight: 600;
+}
+
+.db-goal-track {
+  width: 100%;
+  height: 7px;
+  background: #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.db-goal-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5DCAA5, #1D9E75);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ─────────────────────────────────────────────
+   하단 바차트 카드 (높이 고정, 줄어들지 않음)
+───────────────────────────────────────────── */
+.db-bottom-card {
+  flex-shrink: 0;
+  flex-basis: 175px;  /* 카드 전체 높이 */
+  display: flex;
+  flex-direction: column;
+}
+
+.db-bottom-card .db-bar-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .db-page {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .db-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .db-main-grid {
+    flex: none;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .db-donut-card {
+    width: 100%;
+    flex-shrink: 0;
+    height: 260px;
+  }
+
+  .db-stats-col {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .db-stat-card {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 140px;
+  }
+
+  .db-stat-card--savings .db-stat-value,
+  .db-stat-card--dividend .db-stat-value,
+  .db-stat-card--goal .db-stat-value {
+    font-size: 2rem;
+  }
+
+  .db-bottom-card {
+    flex-basis: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .db-stats-col {
+    flex-direction: column;
+  }
+
+  .db-stat-card--savings .db-stat-value,
+  .db-stat-card--dividend .db-stat-value,
+  .db-stat-card--goal .db-stat-value {
+    font-size: 1.8rem;
+  }
+}

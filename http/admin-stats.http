@@ -1,0 +1,41 @@
+### Admin Stats API — requires ROLE_ADMIN account
+### Set @token to a JWT obtained by logging in with an admin user
+
+@baseUrl = http://localhost:8080
+@token = YOUR_ADMIN_JWT_TOKEN_HERE
+
+### 1. 전체 가입자 수 + 월별 추이 (최근 12개월)
+GET {{baseUrl}}/api/admin/stats/users
+Authorization: Bearer {{token}}
+
+###
+
+### 2. 활성 사용자 수 (최근 30일 내 로그인)
+GET {{baseUrl}}/api/admin/stats/users/active
+Authorization: Bearer {{token}}
+
+###
+
+### 3. 많이 등록된 종목 Top 10
+GET {{baseUrl}}/api/admin/stats/stocks/top10
+Authorization: Bearer {{token}}
+
+###
+
+### 4. 전체 사용자 섹터 비중
+GET {{baseUrl}}/api/admin/stats/sectors
+Authorization: Bearer {{token}}
+
+###
+
+### 5. 섹터별/종목별 평균 배당금
+GET {{baseUrl}}/api/admin/stats/dividends/average
+Authorization: Bearer {{token}}
+
+###
+
+### ── 권한 확인 (ROLE_USER 계정으로 호출 시 403 기대) ──────────────────────
+@userToken = YOUR_USER_JWT_TOKEN_HERE
+
+GET {{baseUrl}}/api/admin/stats/users
+Authorization: Bearer {{userToken}}
