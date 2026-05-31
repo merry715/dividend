@@ -194,7 +194,7 @@ export default function StockPage() {
 
       {/* ── 헤더 ── */}
       <div className="sp-header">
-        <h1 className="sp-title">종목관리</h1>
+        <h1 className="sp-title">종목 관리</h1>
         <p className="sp-subtitle">종목을 추가하고 관리하세요</p>
       </div>
 
