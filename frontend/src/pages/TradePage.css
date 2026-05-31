@@ -322,6 +322,56 @@
 .tp-table thead th.right  { text-align: right; }
 .tp-table thead th.center { text-align: center; }
 
+/* 툴팁 헤더 */
+.tp-table thead th.has-tip {
+  position: relative;
+  cursor: help;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.tp-table thead th.has-tip::before,
+.tp-table thead th.has-tip::after {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.tp-table thead th.has-tip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  border: 5px solid transparent;
+  border-bottom-color: #444;
+  z-index: 102;
+}
+
+.tp-table thead th.has-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  background: #444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+  width: 200px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  z-index: 101;
+}
+
+.tp-table thead th.has-tip:hover::before,
+.tp-table thead th.has-tip:hover::after {
+  opacity: 1;
+}
+
 .tp-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.12s;

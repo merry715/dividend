@@ -363,8 +363,8 @@ export default function TradePage() {
                   <th className="center">유형</th>
                   <th className="right">수량</th>
                   <th className="right">단가</th>
-                  <th className="right">위탁기관 수수료</th>
-                  <th className="right">유관기관 제비용</th>
+                  <th className="right has-tip" data-tip="매수·매도 시 모두 발생하는 증권사 위탁 수수료입니다.">위탁기관<br />수수료</th>
+                  <th className="right has-tip" data-tip="매도 시에만 발생하는 거래소·예탁결제원 등 유관기관 수수료입니다.">유관기관<br />제비용</th>
                   <th className="right">총액</th>
                   <th className="center">수정/삭제</th>
                 </tr>
