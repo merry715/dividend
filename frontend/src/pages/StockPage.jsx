@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import './StockPage.css'
 import logo from '../assets/logo.png'
-import { getStocks, createStock, updateStock, deleteStock } from '../api/stocks'
+import { getStocks, createStock, updateStock, deleteStock, searchStocks } from '../api/stocks'
 
 const fmt = (n) => Number(n || 0).toLocaleString('ko-KR')
 const fmtSign = (n) => (n >= 0 ? '+' : '') + fmt(n)
@@ -33,6 +33,10 @@ export default function StockPage() {
   const [editModal, setEditModal]         = useState(null)
   const [editForm, setEditForm]           = useState({})
   const [isDetailOpen, setIsDetailOpen]   = useState(false)
+  const [suggestions, setSuggestions]     = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const searchTimer   = useRef(null)
+  const suggestionRef = useRef(null)
 
   const fetchStocks = async () => {
     setLoading(true)
@@ -49,6 +53,37 @@ export default function StockPage() {
   }
 
   useEffect(() => { fetchStocks() }, [])
+
+  /* ── 자동완성 ── */
+  const handleStockNameChange = useCallback((value) => {
+    setForm(f => ({ ...f, stockName: value }))
+    clearTimeout(searchTimer.current)
+    if (!value.trim()) { setSuggestions([]); setShowSuggestions(false); return }
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await searchStocks(value.trim())
+        const list = res.data?.data ?? []
+        setSuggestions(list)
+        setShowSuggestions(list.length > 0)
+      } catch {
+        setSuggestions([]); setShowSuggestions(false)
+      }
+    }, 300)
+  }, [])
+
+  const selectSuggestion = (item) => {
+    setForm(f => ({ ...f, stockName: item.stockName, stockCode: item.stockCode }))
+    setSuggestions([]); setShowSuggestions(false)
+  }
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target))
+        setShowSuggestions(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   /* ── 투자 합계 ── */
   const totalInvested = useMemo(() =>
@@ -175,18 +210,32 @@ export default function StockPage() {
         <div className="sp-card sp-form-card">
           <p className="sp-card-title">종목 추가</p>
           <div className="sp-form-row">
-            <input
-              className="sp-input name"
-              placeholder="종목명"
-              value={form.stockName}
-              onChange={e => setForm(f => ({ ...f, stockName: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            />
+            <div className="sp-autocomplete-wrap" ref={suggestionRef}>
+              <input
+                className="sp-input name"
+                placeholder="종목명 검색"
+                value={form.stockName}
+                onChange={e => handleStockNameChange(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                autoComplete="off"
+              />
+              {showSuggestions && (
+                <ul className="sp-suggestions">
+                  {suggestions.map(item => (
+                    <li key={item.stockCode} className="sp-suggestion-item"
+                        onMouseDown={() => selectSuggestion(item)}>
+                      <span className="sp-sug-name">{item.stockName}</span>
+                      <span className="sp-sug-code">{item.stockCode}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <input
               className="sp-input code"
-              placeholder="종목코드 (6자리)"
+              placeholder="종목코드"
               value={form.stockCode}
-              onChange={e => setForm(f => ({ ...f, stockCode: e.target.value }))}
+              readOnly
             />
             <select
               className="sp-select"
