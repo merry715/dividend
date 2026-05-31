@@ -16,3 +16,6 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000       # 24시간 (ms)
   refresh-expiration: 604800000  # 7일 (ms)
+
+dart:
+  api-key: ${DART_API_KEY:9a77df24ff2657a980e10641ce1e02cc25182d37}
