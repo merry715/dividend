@@ -28,8 +28,16 @@ export default function DividendPage() {
   const [loading, setLoading]             = useState(true)
   const [converting, setConverting]       = useState(false)
   const [convertForm, setConvertForm]     = useState({ dividendId: '', payDate: today, perShare: '' })
+  const [error, setError]                 = useState(null)
+  const [toast, setToast]                 = useState({ msg: '', show: false })
+
+  function showToast(msg) {
+    setToast({ msg, show: true })
+    setTimeout(() => setToast(t => ({ ...t, show: false })), 2600)
+  }
 
   const loadAll = useCallback(async (autoGenerate = true) => {
+    setError(null)
     try {
       const [annual, cumulative, monthly, yearly, dividends, stocksRes] = await Promise.all([
         getAnnual(CURRENT_YEAR),
@@ -49,14 +57,17 @@ export default function DividendPage() {
       setDividendList(dividendData)
       setStocks(stockList)
 
-      // 올해 배당 레코드 없으면 자동 생성
+      // 올해 배당 없는 종목만 자동 생성 (연중 추가 종목 누락 방지)
       const thisYearDividends = dividendData.filter(d => d.year === CURRENT_YEAR)
-      if (thisYearDividends.length === 0 && autoGenerate && stockList.length > 0) {
-        await Promise.all(stockList.map(s => generateDividends(s.id, CURRENT_YEAR)))
+      const haveDividend = new Set(thisYearDividends.map(d => d.stockId))
+      const needGenerate = stockList.filter(s => s.quantity > 0 && !haveDividend.has(s.id))
+      if (needGenerate.length > 0 && autoGenerate) {
+        await Promise.all(needGenerate.map(s => generateDividends(s.id, CURRENT_YEAR)))
         return loadAll(false)
       }
     } catch (e) {
       console.error('배당 데이터 로딩 실패', e)
+      setError('배당 데이터를 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -136,7 +147,7 @@ export default function DividendPage() {
       const selectedDividend = expectedItems.find(d => d.id === Number(convertForm.dividendId))
       const stock = stocks.find(s => s.id === selectedDividend?.stockId)
       if (!stock) {
-        console.error('종목 정보를 찾을 수 없습니다:', selectedDividend?.stockId)
+        showToast('종목 정보를 찾을 수 없습니다.')
         return
       }
       const total = Number(convertForm.perShare) * stock.quantity
@@ -148,6 +159,7 @@ export default function DividendPage() {
       await loadAll()
     } catch (e) {
       console.error('확정 전환 실패', e)
+      showToast(e.uiMessage)
     } finally {
       setConverting(false)
     }
@@ -205,6 +217,13 @@ export default function DividendPage() {
   if (loading) return (
     <div className="dp-page dp-loading">
       <p>배당 데이터를 불러오는 중...</p>
+    </div>
+  )
+
+  if (error) return (
+    <div className="dp-page dp-status">
+      <p className="dp-status-msg">{error}</p>
+      <button className="dp-retry-btn" onClick={() => { setLoading(true); loadAll() }}>다시 시도</button>
     </div>
   )
 
@@ -359,6 +378,8 @@ export default function DividendPage() {
           </table>
         </div>
       </div>
+
+      <div className={`dp-toast${toast.show ? ' show' : ''}`}>{toast.msg}</div>
 
     </div>
   )

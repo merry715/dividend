@@ -32,8 +32,16 @@ export default function AnalysisPage() {
   const [saving, setSaving]                 = useState(false)
   const [weightTab, setWeightTab]           = useState('stock')
   const [goalInput, setGoalInput]           = useState('')
+  const [error, setError]                   = useState(null)
+  const [toast, setToast]                   = useState({ msg: '', show: false })
+
+  function showToast(msg) {
+    setToast({ msg, show: true })
+    setTimeout(() => setToast(t => ({ ...t, show: false })), 2600)
+  }
 
   const loadAll = useCallback(async () => {
+    setError(null)
     try {
       const [summaryRes, stockRes, sectorRes, historyRes, goalRes, stocksRes, cumulativeRes] = await Promise.all([
         getSummary(),
@@ -60,6 +68,7 @@ export default function AnalysisPage() {
       if (g?.id) setGoalId(g.id)
     } catch (e) {
       console.error('분석 데이터 로딩 실패', e)
+      setError('분석 데이터를 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -69,16 +78,17 @@ export default function AnalysisPage() {
 
   const handleSaveGoal = async () => {
     const num = Number(String(goalInput).replace(/,/g, ''))
-    if (!num || num <= 0) return
     setSaving(true)
     try {
-      await saveGoal(num)
+      const saveRes = await saveGoal(num)
       const res = await getGoal()
       const g = res.data.data
       setGoal(g)
       if (g?.id) setGoalId(g.id)
+      showToast(saveRes.data?.message || '목표가 저장되었습니다.')
     } catch (e) {
       console.error('목표 저장 실패', e)
+      showToast(e.uiMessage)
     } finally {
       setSaving(false)
     }
@@ -182,6 +192,20 @@ export default function AnalysisPage() {
   if (loading) return (
     <div className="ap-page ap-loading">
       <p>분석 데이터를 불러오는 중...</p>
+    </div>
+  )
+
+  if (error) return (
+    <div className="ap-page ap-status">
+      <p className="ap-status-msg">{error}</p>
+      <button className="ap-retry-btn" onClick={() => { setLoading(true); loadAll() }}>다시 시도</button>
+    </div>
+  )
+
+  if (stocks.length === 0) return (
+    <div className="ap-page ap-status">
+      <p className="ap-status-msg">아직 보유 종목이 없습니다.</p>
+      <p className="ap-status-sub">종목 관리에서 종목을 먼저 추가해 주세요.</p>
     </div>
   )
 
@@ -340,6 +364,8 @@ export default function AnalysisPage() {
         </div>
 
       </div>
+
+      <div className={`ap-toast${toast.show ? ' show' : ''}`}>{toast.msg}</div>
 
     </div>
   )
