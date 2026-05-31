@@ -65,24 +65,12 @@ const AnalysisIcon = () => (
   </svg>
 )
 
-const RebalancingIcon = () => (
-  <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <line x1="2" y1="5" x2="16" y2="5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <line x1="2" y1="13" x2="16" y2="13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <circle cx="6" cy="5" r="2" fill="currentColor" />
-    <circle cx="12" cy="9" r="2" fill="currentColor" />
-    <circle cx="7" cy="13" r="2" fill="currentColor" />
-  </svg>
-)
-
 const navItems = [
   { path: '/dashboard',    label: '대시보드', icon: DashboardIcon   },
   { path: '/stocks',       label: '종목관리', icon: StocksIcon      },
   { path: '/transactions', label: '거래관리', icon: TradesIcon      },
   { path: '/dividends',    label: '배당관리', icon: DividendsIcon   },
   { path: '/analysis',     label: '분석',     icon: AnalysisIcon    },
-  { path: '/rebalancing',  label: '리밸런싱', icon: RebalancingIcon },
 ]
 
 const TIPS = [
@@ -92,63 +80,69 @@ const TIPS = [
   { term: 'DRIP',      desc: '배당금 재투자 제도 — 받은 배당금으로 해당 주식을 자동 매수' },
 ]
 
-export default function Sidebar({ isCollapsed, onToggle }) {
+export default function Sidebar({ isCollapsed, onToggle, isMobileOpen, onMobileClose }) {
   const [showTips, setShowTips] = useState(false)
 
   return (
-    <aside className={`sidebar${isCollapsed ? ' collapsed' : ''}`}>
+    <>
+      {isMobileOpen && (
+        <div className="sidebar__backdrop" onClick={onMobileClose} />
+      )}
+      <aside className={`sidebar${isCollapsed ? ' collapsed' : ''}${isMobileOpen ? ' mobile-open' : ''}`}>
 
-      {/* 토글 버튼 */}
-      <button className="sidebar__toggle" onClick={onToggle} title={isCollapsed ? '펼치기' : '접기'}>
-        {isCollapsed ? '›' : '‹'}
-      </button>
-
-      {/* 브랜드 */}
-      <div className="sidebar__brand">
-        <img src={logo} alt="leafpay" className="sidebar__logo" />
-        <span className="sidebar__brand-name">leafpay</span>
-      </div>
-
-      {/* 내비게이션 */}
-      <nav className="sidebar__nav">
-        <span className="sidebar__nav-label">메뉴</span>
-        {navItems.map(({ path, label, icon: Icon }) => (
-          <NavLink
-            key={path}
-            to={path}
-            className={({ isActive }) => `sidebar__item${isActive ? ' active' : ''}`}
-            title={isCollapsed ? label : undefined}
-          >
-            <span className="sidebar__item-icon"><Icon /></span>
-            <span className="sidebar__item-label">{label}</span>
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* 하단 TIP 버튼 */}
-      <div className="sidebar__footer">
-        {showTips && !isCollapsed && (
-          <div className="sidebar__tips-popover">
-            <div className="sidebar__tips-header">배당 용어 TIP</div>
-            {TIPS.map((t, i) => (
-              <div key={i} className="sidebar__tip-item">
-                <span className="sidebar__tip-term">{t.term}</span>
-                <span className="sidebar__tip-desc">{t.desc}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <button
-          className={`sidebar__tip-btn${showTips ? ' open' : ''}`}
-          onClick={() => !isCollapsed && setShowTips(v => !v)}
-          title="배당 용어 TIP"
-        >
-          <span className="sidebar__tip-emoji">💡</span>
-          <span className="sidebar__tip-label">배당 용어 TIP</span>
-          <span className="sidebar__tip-arrow">{showTips ? '▲' : '▼'}</span>
+        {/* 토글 버튼 */}
+        <button className="sidebar__toggle" onClick={onToggle} title={isCollapsed ? '펼치기' : '접기'}>
+          {isCollapsed ? '›' : '‹'}
         </button>
-      </div>
 
-    </aside>
+        {/* 브랜드 */}
+        <div className="sidebar__brand">
+          <img src={logo} alt="leafpay" className="sidebar__logo" />
+          <span className="sidebar__brand-name">leafpay</span>
+        </div>
+
+        {/* 내비게이션 */}
+        <nav className="sidebar__nav">
+          <span className="sidebar__nav-label">메뉴</span>
+          {navItems.map(({ path, label, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={onMobileClose}
+              className={({ isActive }) => `sidebar__item${isActive ? ' active' : ''}`}
+              title={isCollapsed ? label : undefined}
+            >
+              <span className="sidebar__item-icon"><Icon /></span>
+              <span className="sidebar__item-label">{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* 하단 TIP 버튼 */}
+        <div className="sidebar__footer">
+          {showTips && !isCollapsed && (
+            <div className="sidebar__tips-popover">
+              <div className="sidebar__tips-header">배당 용어 TIP</div>
+              {TIPS.map((t, i) => (
+                <div key={i} className="sidebar__tip-item">
+                  <span className="sidebar__tip-term">{t.term}</span>
+                  <span className="sidebar__tip-desc">{t.desc}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            className={`sidebar__tip-btn${showTips ? ' open' : ''}`}
+            onClick={() => !isCollapsed && setShowTips(v => !v)}
+            title="배당 용어 TIP"
+          >
+            <span className="sidebar__tip-emoji">💡</span>
+            <span className="sidebar__tip-label">배당 용어 TIP</span>
+            <span className="sidebar__tip-arrow">{showTips ? '▲' : '▼'}</span>
+          </button>
+        </div>
+
+      </aside>
+    </>
   )
 }

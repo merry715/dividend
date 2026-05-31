@@ -97,15 +97,17 @@ public class StockResponse {
                 .toList();
 
         List<Integer> paymentMonths = thisYear.stream()
-                .map(Dividend::getPaymentMonth)
+                .map(Dividend::getMonth)
                 .distinct()
                 .sorted()
                 .toList();
 
         int dividendSum = thisYear.stream()
-                .mapToInt(d -> "CONFIRMED".equals(d.getStatus())
-                        ? d.getConfirmedDividend()
-                        : d.getExpectedDividend())
+                .mapToInt(d -> {
+                    if ("CONFIRMED".equals(d.getStatus()) && d.getConfirmedAmount() != null)
+                        return d.getConfirmedAmount().intValue();
+                    return d.getExpectedAmount() != null ? d.getExpectedAmount().intValue() : 0;
+                })
                 .sum();
 
         return StockResponse.builder()

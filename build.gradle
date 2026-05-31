@@ -8,9 +8,8 @@ group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
-	}
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 repositories {
@@ -28,10 +27,37 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+bootRun {
+	def envFile = file('.env')
+	if (envFile.exists()) {
+		def envMap = [:]
+		envFile.readLines().each { line ->
+			if (line && !line.startsWith('#')) {
+				def parts = line.split('=', 2)
+				if (parts.length == 2) envMap[parts[0].trim()] = parts[1].trim()
+			}
+		}
+		environment envMap
+
+		def mysqlUrl = envMap['MYSQL_PUBLIC_URL']
+		if (mysqlUrl) {
+			def m = (mysqlUrl =~ /mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/)
+			if (m.matches()) {
+				environment 'DB_URL', "jdbc:mysql://${m[0][3]}:${m[0][4]}/${m[0][5]}?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true"
+				environment 'DB_USERNAME', m[0][1]
+				environment 'DB_PASSWORD', m[0][2]
+			}
+		}
+	}
 }

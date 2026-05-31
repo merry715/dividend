@@ -37,6 +37,7 @@
   border-radius: 14px;
   padding: 14px 16px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .sp-card-title {
@@ -187,6 +188,7 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+  overflow-x: visible;
 }
 
 .sp-summary-item {
@@ -214,6 +216,7 @@
 
 .sp-pct-bar {
   flex: 1;
+  min-width: 0;
   height: 5px;
   background: #e8e8e8;
   border-radius: 3px;
@@ -229,7 +232,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #333;
-  width: 28px;
+  width: 36px;
   text-align: right;
   flex-shrink: 0;
 }
@@ -871,3 +874,53 @@
 
 .sp-pnl-amount.profit, .sp-pnl-pct.profit { color: #639922; }
 .sp-pnl-amount.loss,   .sp-pnl-pct.loss   { color: #E24B4A; }
+
+@media (max-width: 768px) {
+  .sp-page {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .sp-top-row {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .sp-summary-card {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .sp-middle-row {
+    flex: none;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sp-table-section {
+    flex: none;
+    height: 380px;
+  }
+
+  .sp-table-wrap {
+    overflow-x: auto;
+  }
+
+  .sp-detail-panel.open {
+    width: 100%;
+    height: 340px;
+  }
+
+  .sp-bottom-row {
+    flex: 0 0 auto;
+    height: auto;
+    flex-direction: column;
+  }
+
+  .sp-sector-card,
+  .sp-pnl-card {
+    height: 160px;
+  }
+}

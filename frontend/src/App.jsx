@@ -4,6 +4,10 @@ import Sidebar from './components/Layout/Sidebar'
 import Topbar from './components/Layout/Topbar'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import AnalysisPage from './pages/AnalysisPage'
+import DividendPage from './pages/DividendPage'
+import AdminPage from './pages/AdminPage'
+import TradePage from './pages/TradePage'
 import StockPage from './pages/StockPage'
 import DashboardPage from './pages/DashboardPage'
 
@@ -12,21 +16,27 @@ function PrivateRoute({ children }) {
   return token ? children : <Navigate to="/" replace />
 }
 
-function MainLayout({ collapsed, onToggle }) {
+function MainLayout({ collapsed, onToggle, mobileOpen, onHamburger, onMobileClose }) {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-      <Sidebar isCollapsed={collapsed} onToggle={onToggle} />
+      <Sidebar
+        isCollapsed={collapsed}
+        onToggle={onToggle}
+        isMobileOpen={mobileOpen}
+        onMobileClose={onMobileClose}
+      />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-        <Topbar />
-        <main style={{
-          flex: 1,
-          minWidth: 0,
-          minHeight: 0,
-          padding: '20px 24px',
-          background: '#ffffff',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
-        }}>
+        <Topbar onHamburger={onHamburger} />
+        <main
+          className="main-content"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            background: '#ffffff',
+            boxSizing: 'border-box',
+          }}
+        >
           <Outlet />
         </main>
       </div>
@@ -36,20 +46,31 @@ function MainLayout({ collapsed, onToggle }) {
 
 export default function App() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route element={<PrivateRoute><MainLayout collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} /></PrivateRoute>}>
+        <Route element={
+          <PrivateRoute>
+            <MainLayout
+              collapsed={collapsed}
+              onToggle={() => setCollapsed(v => !v)}
+              mobileOpen={mobileOpen}
+              onHamburger={() => setMobileOpen(v => !v)}
+              onMobileClose={() => setMobileOpen(false)}
+            />
+          </PrivateRoute>
+        }>
           <Route path="/dashboard"    element={<DashboardPage />} />
           <Route path="/stocks"       element={<StockPage />} />
-          <Route path="/transactions" element={<div />} />
-          <Route path="/dividends"    element={<div />} />
-          <Route path="/analysis"     element={<div />} />
+          <Route path="/transactions" element={<TradePage />} />
+          <Route path="/dividends"    element={<DividendPage />} />
+          <Route path="/analysis"     element={<AnalysisPage />} />
           <Route path="/rebalancing"  element={<div />} />
-          <Route path="/admin"        element={<div />} />
+          <Route path="/admin"        element={<AdminPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
