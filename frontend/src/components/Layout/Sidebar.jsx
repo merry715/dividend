@@ -67,8 +67,8 @@ const AnalysisIcon = () => (
 
 const navItems = [
   { path: '/dashboard',    label: '대시보드', icon: DashboardIcon   },
-  { path: '/stocks',       label: '종목관리', icon: StocksIcon      },
-  { path: '/transactions', label: '거래관리', icon: TradesIcon      },
+  { path: '/stocks',       label: '종목 관리', icon: StocksIcon      },
+  { path: '/transactions', label: '거래 관리', icon: TradesIcon      },
   { path: '/dividends',    label: '배당관리', icon: DividendsIcon   },
   { path: '/analysis',     label: '분석',     icon: AnalysisIcon    },
 ]

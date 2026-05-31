@@ -9,6 +9,7 @@ import { getStocks } from '../api/stocks'
 import {
   getTransactions,
   createTransaction,
+  updateTransaction,
   deleteTransaction,
   getTransactionsSummary,
   getTransactionsChart,
@@ -38,6 +39,8 @@ export default function TradePage() {
   const [loading, setLoading]                 = useState(true)
   const [filterType, setFilterType]           = useState('전체')
   const [searchName, setSearchName]           = useState('')
+  const [editModal, setEditModal]             = useState(null)
+  const [editForm, setEditForm]               = useState({})
   const [form, setForm]                       = useState({
     stockId: '', type: '매수',
     quantity: '', price: '', date: TODAY,
@@ -105,6 +108,38 @@ export default function TradePage() {
       await fetchAll()
     } catch (err) {
       alert(err.response?.data?.message ?? '거래 등록에 실패했습니다')
+    }
+  }
+
+  /* ── 수정 모달 ── */
+  const openEditModal = (trade) => {
+    setEditModal(trade)
+    setEditForm({
+      stockId:        String(trade.stockId),
+      type:           TYPE_LABEL[trade.type] ?? trade.type,
+      quantity:       trade.quantity,
+      price:          trade.price,
+      date:           trade.date,
+      brokerFee:      trade.brokerFee ?? 0,
+      transactionTax: trade.transactionTax ?? 0,
+    })
+  }
+
+  const saveEdit = async () => {
+    try {
+      await updateTransaction(editModal.id, {
+        stockId:        Number(editForm.stockId),
+        type:           TYPE_API[editForm.type],
+        quantity:       Number(editForm.quantity),
+        price:          Number(editForm.price),
+        date:           editForm.date,
+        brokerFee:      Number(editForm.brokerFee) || 0,
+        transactionTax: Number(editForm.transactionTax) || 0,
+      })
+      setEditModal(null)
+      await fetchAll()
+    } catch (err) {
+      alert(err.response?.data?.message ?? '수정에 실패했습니다')
     }
   }
 
@@ -191,7 +226,7 @@ export default function TradePage() {
 
       {/* ── 헤더 ── */}
       <div className="tp-header">
-        <h1 className="tp-title">거래관리</h1>
+        <h1 className="tp-title">거래 관리</h1>
         <p className="tp-subtitle">거래 내역을 확인하세요</p>
       </div>
 
@@ -241,7 +276,7 @@ export default function TradePage() {
       <div className="tp-card tp-form-section">
         <p className="tp-card-title">거래 등록</p>
         {!loading && stocks.length === 0 ? (
-          <p style={{ color: '#bbb', fontSize: 13 }}>종목관리 페이지에서 종목을 먼저 추가해주세요</p>
+          <p style={{ color: '#bbb', fontSize: 13 }}>종목 관리 페이지에서 종목을 먼저 추가해주세요</p>
         ) : (
           <div className="tp-form-row">
 
@@ -271,8 +306,8 @@ export default function TradePage() {
             <input className="tp-fi tp-fi-sm" type="number" placeholder="수량" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
             <input className="tp-fi tp-fi-md" type="number" placeholder="단가 (원)" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
             <input className="tp-fi tp-fi-date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-            <input className="tp-fi tp-fi-sm" type="number" placeholder="수수료" value={form.brokerFee} onChange={e => setForm(f => ({ ...f, brokerFee: e.target.value }))} />
-            <input className="tp-fi tp-fi-sm" type="number" placeholder="거래세" value={form.transactionTax} onChange={e => setForm(f => ({ ...f, transactionTax: e.target.value }))} />
+            <input className="tp-fi tp-fi-sm" type="number" placeholder="위탁기관 수수료" value={form.brokerFee} onChange={e => setForm(f => ({ ...f, brokerFee: e.target.value }))} />
+            <input className="tp-fi tp-fi-sm" type="number" placeholder="유관기관 제비용" value={form.transactionTax} onChange={e => setForm(f => ({ ...f, transactionTax: e.target.value }))} />
 
             <div className="tp-form-total">
               <span className="tp-form-total-label">총액</span>
@@ -328,10 +363,10 @@ export default function TradePage() {
                   <th className="center">유형</th>
                   <th className="right">수량</th>
                   <th className="right">단가</th>
-                  <th className="right">수수료</th>
-                  <th className="right">거래세</th>
+                  <th className="right">위탁기관 수수료</th>
+                  <th className="right">유관기관 제비용</th>
                   <th className="right">총액</th>
-                  <th className="center">삭제</th>
+                  <th className="center">수정/삭제</th>
                 </tr>
               </thead>
               <tbody>
@@ -357,6 +392,7 @@ export default function TradePage() {
                         {t.type === 'BUY' ? '-' : '+'}{fmt(Math.abs(total))}
                       </td>
                       <td className="center">
+                        <button className="tp-btn-edit" onClick={() => openEditModal(t)}>수정</button>
                         <button className="tp-btn-delete" onClick={() => handleDelete(t.id)}>삭제</button>
                       </td>
                     </tr>
@@ -368,6 +404,62 @@ export default function TradePage() {
         </div>
 
       </div>
+
+      {/* ── 수정 모달 ── */}
+      {editModal && (
+        <div className="tp-modal-overlay" onClick={() => setEditModal(null)}>
+          <div className="tp-modal" onClick={e => e.stopPropagation()}>
+            <p className="tp-modal-title">거래 수정</p>
+            <div className="tp-modal-form">
+              <label className="tp-modal-label">
+                종목
+                <select
+                  className="tp-modal-select"
+                  value={editForm.stockId}
+                  onChange={e => setEditForm(f => ({ ...f, stockId: e.target.value }))}
+                >
+                  {stocks.map(s => <option key={s.id} value={String(s.id)}>{s.stockName}</option>)}
+                </select>
+              </label>
+              <div className="tp-modal-label">
+                유형
+                <div className="tp-type-tabs">
+                  {['매수', '매도'].map(t => (
+                    <button
+                      key={t}
+                      className={`tp-type-tab${editForm.type === t ? ` active ${typeClass(t)}` : ''}`}
+                      onClick={() => setEditForm(f => ({ ...f, type: t }))}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {[
+                { key: 'quantity',       label: '수량',                  type: 'number' },
+                { key: 'price',          label: '단가 (원)',              type: 'number' },
+                { key: 'date',           label: '날짜',                  type: 'date'   },
+                { key: 'brokerFee',      label: '위탁기관 수수료 (원)',    type: 'number' },
+                { key: 'transactionTax', label: '유관기관 제비용 (원)',    type: 'number' },
+              ].map(({ key, label, type }) => (
+                <label key={key} className="tp-modal-label">
+                  {label}
+                  <input
+                    className="tp-modal-input"
+                    type={type}
+                    value={editForm[key]}
+                    onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="tp-modal-actions">
+              <button className="tp-modal-cancel" onClick={() => setEditModal(null)}>취소</button>
+              <button className="tp-modal-save" onClick={saveEdit}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
