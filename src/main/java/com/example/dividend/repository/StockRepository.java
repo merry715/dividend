@@ -21,6 +21,11 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     // 종목 코드 중복 확인 (사용자 내, soft delete 제외)
     boolean existsByUser_IdAndStockCode(Long userId, String stockCode);
 
+    // 소프트 딜리트된 종목 조회 (복원용 — @SQLRestriction 우회)
+    @Query(value = "SELECT * FROM stock WHERE user_id = :userId AND stock_code = :stockCode AND deleted_at IS NOT NULL LIMIT 1",
+           nativeQuery = true)
+    Optional<Stock> findDeletedByUserIdAndStockCode(@Param("userId") Long userId, @Param("stockCode") String stockCode);
+
     // 종목명·코드 키워드 검색 (사용자 내)
     @Query("""
             SELECT s FROM Stock s
