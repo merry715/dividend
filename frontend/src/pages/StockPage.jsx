@@ -19,11 +19,10 @@ const SECTORS = [
   { code: 'UTILITIES',              label: '유틸리티' },
   { code: 'REAL_ESTATE',            label: '부동산' },
 ]
-const EXCHANGES = ['KOSPI', 'KOSDAQ']
 const SUMMARY_COLORS = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#2DB589', '#C8EFDF']
 const SECTOR_COLORS  = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#C8EFE3', '#DDF0E9', '#E8F7F1']
 
-const EMPTY_FORM = { stockName: '', stockCode: '', sector: 'IT', exchange: 'KOSPI', quantity: '', avgPrice: '' }
+const EMPTY_FORM = { stockName: '', stockCode: '', sector: 'IT', quantity: '', avgPrice: '' }
 
 export default function StockPage() {
   const [stocks, setStocks]               = useState([])
@@ -139,7 +138,6 @@ export default function StockPage() {
         stockName:  form.stockName.trim(),
         stockCode:  form.stockCode.trim(),
         sector:     form.sector || undefined,
-        exchange:   form.exchange || undefined,
         quantity:   Number(form.quantity) || 0,
         avgPrice:   Number(form.avgPrice) || 0,
       })
@@ -161,20 +159,16 @@ export default function StockPage() {
   const openEdit = stock => {
     setEditModal(stock)
     setEditForm({
-      quantity:                 stock.quantity,
-      avgPrice:                 stock.avgPrice,
-      expectedDividendPerShare: stock.expectedDividendPerShare ?? '',
+      quantity: stock.quantity,
+      avgPrice: stock.avgPrice,
     })
   }
 
   const saveEdit = async () => {
     try {
       await updateStock(editModal.id, {
-        quantity:                 Number(editForm.quantity),
-        avgPrice:                 Number(editForm.avgPrice),
-        expectedDividendPerShare: editForm.expectedDividendPerShare !== ''
-          ? Number(editForm.expectedDividendPerShare)
-          : undefined,
+        quantity: Number(editForm.quantity),
+        avgPrice: Number(editForm.avgPrice),
       })
       setEditModal(null)
       await fetchStocks()
@@ -244,13 +238,6 @@ export default function StockPage() {
             >
               {SECTORS.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
             </select>
-            <select
-              className="sp-select"
-              value={form.exchange}
-              onChange={e => setForm(f => ({ ...f, exchange: e.target.value }))}
-            >
-              {EXCHANGES.map(ex => <option key={ex}>{ex}</option>)}
-            </select>
             <input
               className="sp-input qty"
               type="number"
@@ -261,7 +248,7 @@ export default function StockPage() {
             <input
               className="sp-input price"
               type="number"
-              placeholder="평균단가"
+              placeholder="단가"
               value={form.avgPrice}
               onChange={e => setForm(f => ({ ...f, avgPrice: e.target.value }))}
             />
@@ -357,11 +344,11 @@ export default function StockPage() {
                     <span className="sp-detail-value neutral">{fmt(selectedStock.quantity)}주</span>
                   </div>
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">평균단가</span>
+                    <span className="sp-detail-label">단가</span>
                     <span className="sp-detail-value neutral">{fmt(selectedStock.avgPrice)}원</span>
                   </div>
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">현재가</span>
+                    <span className="sp-detail-label">전일 종가</span>
                     <span className="sp-detail-value neutral">
                       {selectedStock.previousClose ? fmt(selectedStock.previousClose) + '원' : '-'}
                     </span>
@@ -391,10 +378,10 @@ export default function StockPage() {
               <table className="sp-table">
                 <thead>
                   <tr>
-                    <th>종목명</th><th>종목코드</th><th>섹터</th>
-                    <th className="right">보유수량</th>
-                    <th className="right">평균단가</th>
-                    <th className="right">현재가</th>
+                    <th>종목명</th><th>종목코드</th><th className="narrow">섹터</th>
+                    <th className="right narrow">보유수량</th>
+                    <th className="right">단가</th>
+                    <th className="right">전일 종가</th>
                     <th className="right">평가손익</th>
                     <th className="center">수정/삭제</th>
                   </tr>
@@ -412,8 +399,8 @@ export default function StockPage() {
                       >
                         <td className="stock-name">{s.stockName}</td>
                         <td>{s.stockCode}</td>
-                        <td>{s.sectorLabel ?? s.sectorCode ?? '-'}</td>
-                        <td className="right">{fmt(s.quantity)}</td>
+                        <td className="narrow">{s.sectorLabel ?? s.sectorCode ?? '-'}</td>
+                        <td className="right narrow">{fmt(s.quantity)}</td>
                         <td className="right">{fmt(s.avgPrice)}</td>
                         <td className="right">{s.previousClose ? fmt(s.previousClose) : '-'}</td>
                         <td className={`right ${pnl >= 0 ? 'profit' : 'loss'}`}>{fmtSign(pnl)}</td>
@@ -485,9 +472,8 @@ export default function StockPage() {
             <p className="sp-modal-title">종목 수정 — {editModal.stockName}</p>
             <div className="sp-modal-form">
               {[
-                { key: 'quantity',                 label: '보유수량' },
-                { key: 'avgPrice',                 label: '평균단가 (원)' },
-                { key: 'expectedDividendPerShare', label: '주당 예상 배당금 (원)' },
+                { key: 'quantity', label: '보유수량' },
+                { key: 'avgPrice', label: '단가 (원)' },
               ].map(({ key, label }) => (
                 <label key={key} className="sp-modal-label">
                   {label}
