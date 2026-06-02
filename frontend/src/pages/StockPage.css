@@ -346,6 +346,8 @@
 
 .sp-table thead th.right { text-align: right; }
 .sp-table thead th.center { text-align: center; }
+.sp-table thead th.narrow,
+.sp-table tbody td.narrow { padding-left: 6px; padding-right: 6px; }
 
 .sp-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
@@ -606,9 +608,15 @@
   letter-spacing: -0.2px;
 }
 
-.sp-detail-value.neutral { color: #333; }
-.sp-detail-value.profit  { color: #639922; }
-.sp-detail-value.loss    { color: #E24B4A; }
+.sp-detail-value.neutral  { color: #333; }
+.sp-detail-value.profit   { color: #639922; }
+.sp-detail-value.loss     { color: #E24B4A; }
+.sp-detail-value.sp-detail-na {
+  color: #bbb;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
 
 /* 하단 버튼 */
 .sp-detail-footer {
@@ -783,11 +791,10 @@
   font-size: 12px;
   font-weight: 600;
   color: #555;
-  width: 48px;
+  width: 80px;
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sp-sector-bar-bg {
@@ -832,11 +839,10 @@
   font-size: 12px;
   font-weight: 600;
   color: #555;
-  width: 56px;
+  width: 76px;
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sp-pnl-bar-bg {
