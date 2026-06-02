@@ -9,15 +9,15 @@ import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    List<Transaction> findByStockId(Long stockId);
+    List<Transaction> findByUserId(Long userId);
 
-    List<Transaction> findByType(String type);
+    List<Transaction> findByUserIdAndStockId(Long userId, Long stockId);
 
-    List<Transaction> findByStockIdAndType(Long stockId, String type);
+    List<Transaction> findByUserIdAndType(Long userId, String type);
 
-    @Query("SELECT t FROM Transaction t WHERE YEAR(t.date) = :year")
-    List<Transaction> findByYear(@Param("year") int year);
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND YEAR(t.date) = :year")
+    List<Transaction> findByUserIdAndYear(@Param("userId") Long userId, @Param("year") int year);
 
-    @Query("SELECT t FROM Transaction t WHERE YEAR(t.date) = :year AND t.type = :type")
-    List<Transaction> findByYearAndType(@Param("year") int year, @Param("type") String type);
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND YEAR(t.date) = :year AND t.type = :type")
+    List<Transaction> findByUserIdAndYearAndType(@Param("userId") Long userId, @Param("year") int year, @Param("type") String type);
 }

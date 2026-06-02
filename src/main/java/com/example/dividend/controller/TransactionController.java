@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,23 +23,22 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-    // 전체 거래 내역 조회 (연도·유형 필터)
     @GetMapping
     public ApiResponse<List<Transaction>> getAll(
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) String type) {
-        return ApiResponse.ok(transactionService.getAll(year, type));
+        return ApiResponse.ok(transactionService.getAll(userId, year, type));
     }
 
-    // 거래 입력
     @PostMapping
     public ResponseEntity<ApiResponse<Transaction>> add(
+            @AuthenticationPrincipal Long userId,
             @RequestBody @Valid TransactionCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(transactionService.add(request), "거래가 등록되었습니다"));
+                .body(ApiResponse.ok(transactionService.add(userId, request), "거래가 등록되었습니다"));
     }
 
-    // 거래 수정
     @PatchMapping("/{transactionId}")
     public ResponseEntity<ApiResponse<Transaction>> update(
             @PathVariable Long transactionId,
@@ -50,7 +50,6 @@ public class TransactionController {
         }
     }
 
-    // 거래 삭제
     @DeleteMapping("/{transactionId}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long transactionId) {
         try {
@@ -61,33 +60,34 @@ public class TransactionController {
         }
     }
 
-    // 종목별 거래 조회
     @GetMapping("/stocks/{stockId}")
-    public ApiResponse<List<Transaction>> getByStock(@PathVariable Long stockId) {
-        return ApiResponse.ok(transactionService.getByStockId(stockId));
+    public ApiResponse<List<Transaction>> getByStock(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long stockId) {
+        return ApiResponse.ok(transactionService.getByStockId(userId, stockId));
     }
 
-    // 거래 요약
     @GetMapping("/summary")
-    public ApiResponse<Map<String, Object>> getSummary() {
-        return ApiResponse.ok(transactionService.getSummary());
+    public ApiResponse<Map<String, Object>> getSummary(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(transactionService.getSummary(userId));
     }
 
-    // 전체 종목 보유 현황 (수량 + 평균 단가)
     @GetMapping("/holdings")
-    public ApiResponse<List<Map<String, Object>>> getAllHoldings() {
-        return ApiResponse.ok(transactionService.getAllHoldings());
+    public ApiResponse<List<Map<String, Object>>> getAllHoldings(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(transactionService.getAllHoldings(userId));
     }
 
-    // 특정 종목 보유 현황
     @GetMapping("/stocks/{stockId}/holdings")
-    public ApiResponse<Map<String, Object>> getStockHolding(@PathVariable Long stockId) {
-        return ApiResponse.ok(transactionService.getStockHolding(stockId));
+    public ApiResponse<Map<String, Object>> getStockHolding(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long stockId) {
+        return ApiResponse.ok(transactionService.getStockHolding(userId, stockId));
     }
 
-    // 월별 매수/매도 추이
     @GetMapping("/chart")
-    public ApiResponse<Map<String, Object>> getChart(@RequestParam int year) {
-        return ApiResponse.ok(transactionService.getMonthlyChart(year));
+    public ApiResponse<Map<String, Object>> getChart(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam int year) {
+        return ApiResponse.ok(transactionService.getMonthlyChart(userId, year));
     }
 }
