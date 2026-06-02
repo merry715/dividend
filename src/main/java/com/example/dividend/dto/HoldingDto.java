@@ -4,11 +4,11 @@ public class HoldingDto {
 
     private String stockName;
     private int quantity;
-    private int totalInvestment;
+    private long totalInvestment;
     private int expectedDividend;
-    private int averagePrice;
+    private long averagePrice;
 
-    public HoldingDto(String stockName, int quantity, int totalInvestment, int expectedDividend, int averagePrice) {
+    public HoldingDto(String stockName, int quantity, long totalInvestment, int expectedDividend, long averagePrice) {
         this.stockName = stockName;
         this.quantity = quantity;
         this.totalInvestment = totalInvestment;
@@ -24,7 +24,7 @@ public class HoldingDto {
         return quantity;
     }
 
-    public int getTotalInvestment() {
+    public long getTotalInvestment() {
         return totalInvestment;
     }
 
@@ -32,7 +32,7 @@ public class HoldingDto {
         return expectedDividend;
     }
 
-    public int getAveragePrice() {
+    public long getAveragePrice() {
         return averagePrice;
     }
 }
