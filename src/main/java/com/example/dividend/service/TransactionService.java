@@ -17,22 +17,22 @@ public class TransactionService {
         this.transactionRepository = transactionRepository;
     }
 
-    // 연도·유형 필터 조회 (DB 레벨 쿼리)
-    public List<Transaction> getAll(Integer year, String type) {
+    public List<Transaction> getAll(Long userId, Integer year, String type) {
         if (year != null && type != null) {
-            return transactionRepository.findByYearAndType(year, type.toUpperCase());
+            return transactionRepository.findActiveByUserIdAndYearAndType(userId, year, type.toUpperCase());
         }
         if (year != null) {
-            return transactionRepository.findByYear(year);
+            return transactionRepository.findActiveByUserIdAndYear(userId, year);
         }
         if (type != null) {
-            return transactionRepository.findByType(type.toUpperCase());
+            return transactionRepository.findActiveByUserIdAndType(userId, type.toUpperCase());
         }
-        return transactionRepository.findAll();
+        return transactionRepository.findActiveByUserId(userId);
     }
 
-    public Transaction add(TransactionCreateRequest req) {
+    public Transaction add(Long userId, TransactionCreateRequest req) {
         Transaction t = new Transaction();
+        t.setUserId(userId);
         t.setStockId(req.getStockId());
         t.setType(req.getType());
         t.setQuantity(req.getQuantity());
@@ -64,17 +64,16 @@ public class TransactionService {
         transactionRepository.deleteById(id);
     }
 
-    public List<Transaction> getByStockId(Long stockId) {
-        return transactionRepository.findByStockId(stockId);
+    public List<Transaction> getByStockId(Long userId, Long stockId) {
+        return transactionRepository.findByUserIdAndStockId(userId, stockId);
     }
 
-    // 특정 종목의 보유 수량 및 평균 단가 계산
     // 평균 단가 = (매수금액 합계 + 위탁수수료 합계) / 총 매수 수량
-    public Map<String, Object> getStockHolding(Long stockId) {
-        List<Transaction> all = transactionRepository.findByStockId(stockId);
+    public Map<String, Object> getStockHolding(Long userId, Long stockId) {
+        List<Transaction> all = transactionRepository.findByUserIdAndStockId(userId, stockId);
 
         int totalBuyQty = 0, totalSellQty = 0;
-        long totalBuyCost = 0;  // 매수 원가 (수수료 포함)
+        long totalBuyCost = 0;
         long totalBrokerFee = 0, totalTransactionTax = 0;
 
         for (Transaction t : all) {
@@ -104,12 +103,11 @@ public class TransactionService {
         return result;
     }
 
-    // 전체 종목의 보유 현황 집계
-    public List<Map<String, Object>> getAllHoldings() {
-        Map<Long, int[]> qtyMap = new LinkedHashMap<>();   // stockId -> [buyQty, sellQty]
-        Map<Long, Long>  costMap = new LinkedHashMap<>();  // stockId -> buyCost (수수료 포함)
+    public List<Map<String, Object>> getAllHoldings(Long userId) {
+        Map<Long, int[]> qtyMap = new LinkedHashMap<>();
+        Map<Long, Long>  costMap = new LinkedHashMap<>();
 
-        for (Transaction t : transactionRepository.findAll()) {
+        for (Transaction t : transactionRepository.findActiveByUserId(userId)) {
             Long stockId = t.getStockId();
             qtyMap.putIfAbsent(stockId, new int[]{0, 0});
             costMap.putIfAbsent(stockId, 0L);
@@ -141,9 +139,8 @@ public class TransactionService {
         return result;
     }
 
-    // 전체 거래 요약 (수수료·세금 포함)
-    public Map<String, Object> getSummary() {
-        List<Transaction> all = transactionRepository.findAll();
+    public Map<String, Object> getSummary(Long userId) {
+        List<Transaction> all = transactionRepository.findActiveByUserId(userId);
 
         long totalBuyAmount = 0, totalSellAmount = 0, totalBrokerFee = 0, totalTransactionTax = 0;
         for (Transaction t : all) {
@@ -165,8 +162,8 @@ public class TransactionService {
         return summary;
     }
 
-    public Map<String, Object> getMonthlyChart(int year) {
-        List<Transaction> filtered = transactionRepository.findByYear(year);
+    public Map<String, Object> getMonthlyChart(Long userId, int year) {
+        List<Transaction> filtered = transactionRepository.findActiveByUserIdAndYear(userId, year);
 
         Map<Integer, long[]> monthMap = new TreeMap<>();
         for (int i = 1; i <= 12; i++) monthMap.put(i, new long[]{0L, 0L});
