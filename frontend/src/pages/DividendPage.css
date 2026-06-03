@@ -306,6 +306,7 @@
 .dp-status-badge.confirmed { background: #E1F5EE; color: #1D9E75; }
 .dp-status-badge.partial   { background: #FFF3E0; color: #E67E22; }
 .dp-status-badge.expected  { background: #f0f0f0; color: #999;    }
+.dp-status-badge.expired   { background: #f0f0f0; color: #ccc;    }
 
 /* ── 지급월 태그 ── */
 .dp-month-tags {
@@ -324,19 +325,12 @@
 
 .dp-month-tag.confirmed { background: #E1F5EE; color: #1D9E75; }
 .dp-month-tag.expected  { background: #f0f0f0; color: #aaa;    }
+.dp-month-tag.expired   { background: #f7f7f7; color: #ccc; text-decoration: line-through; }
 
-.dp-ex-tag {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.dp-modal-ex {
-  display: block;
-  font-size: 10px;
-  color: #888;
-  font-weight: 500;
-  margin-top: 2px;
-}
+/* 경과 행 전체 흐리게 */
+.dp-stock-table tbody tr.dp-tr-expired td { color: #ccc; }
+.dp-stock-table tbody tr.dp-tr-expired .dp-stock-name { color: #ccc; }
+.dp-stock-table tbody tr.dp-tr-expired:hover { background: transparent; }
 
 /* ── 수정 버튼 ── */
 .dp-edit-btn {
