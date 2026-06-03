@@ -19,8 +19,8 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 
 const fmt = (n) => Number(n || 0).toLocaleString('ko-KR')
 
-const MONTHS      = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
-const TODAY       = new Date().toISOString().split('T')[0]
+const MONTHS       = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
+const TODAY        = new Date().toISOString().split('T')[0]
 const CURRENT_YEAR = new Date().getFullYear()
 
 const TYPE_LABEL = { BUY: '매수', SELL: '매도' }
@@ -31,48 +31,39 @@ const EMPTY_SUMMARY = { totalTransactions: 0, totalBuyAmount: 0, totalSellAmount
 const EMPTY_CHART   = Array(12).fill(0)
 
 export default function TradePage() {
-  const [stocks, setStocks]                   = useState([])
-  const [trades, setTrades]                   = useState([])
-  const [summary, setSummary]                 = useState(EMPTY_SUMMARY)
-  const [chartBuy, setChartBuy]               = useState(EMPTY_CHART)
-  const [chartSell, setChartSell]             = useState(EMPTY_CHART)
-  const [loading, setLoading]                 = useState(true)
-  const [filterType, setFilterType]           = useState('전체')
-  const [searchName, setSearchName]           = useState('')
-  const [editModal, setEditModal]             = useState(null)
-  const [editForm, setEditForm]               = useState({})
-  const [form, setForm]                       = useState({
+  const [stocks, setStocks]       = useState([])
+  const [trades, setTrades]       = useState([])
+  const [summary, setSummary]     = useState(EMPTY_SUMMARY)
+  const [chartBuy, setChartBuy]   = useState(EMPTY_CHART)
+  const [chartSell, setChartSell] = useState(EMPTY_CHART)
+  const [chartYear, setChartYear] = useState(CURRENT_YEAR)
+  const [loading, setLoading]     = useState(true)
+  const [filterType, setFilterType] = useState('전체')
+  const [searchName, setSearchName] = useState('')
+  const [editModal, setEditModal]   = useState(null)
+  const [editForm, setEditForm]     = useState({})
+  const [form, setForm]             = useState({
     stockId: '', type: '매수',
     quantity: '', price: '', date: TODAY,
     brokerFee: '', transactionTax: '',
   })
 
-  /* stockId → stockName 조회 테이블 */
+  /* stockId → stock 객체 조회 테이블 */
   const stockMap = useMemo(
-    () => Object.fromEntries(stocks.map(s => [s.id, s.stockName])),
+    () => Object.fromEntries(stocks.map(s => [s.id, s])),
     [stocks]
   )
 
-  const fetchAll = async () => {
-    setLoading(true)
+  /* 거래 내역에서 연도 목록 추출 */
+  const tradeYears = useMemo(() => {
+    const years = new Set(trades.map(t => new Date(t.date).getFullYear()))
+    years.add(CURRENT_YEAR)
+    return Array.from(years).sort((a, b) => a - b)
+  }, [trades])
+
+  const fetchChartData = async (year) => {
     try {
-      const [stocksRes, tradesRes, summaryRes, chartRes] = await Promise.all([
-        getStocks(),
-        getTransactions(),
-        getTransactionsSummary(),
-        getTransactionsChart(CURRENT_YEAR),
-      ])
-
-      const stockList = stocksRes.data.data ?? []
-      setStocks(stockList)
-      // 종목이 있고 현재 선택된 종목이 없으면 첫 번째로 설정
-      if (stockList.length > 0) {
-        setForm(f => ({ ...f, stockId: f.stockId || String(stockList[0].id) }))
-      }
-
-      setTrades(tradesRes.data.data ?? [])
-      setSummary(summaryRes.data.data ?? EMPTY_SUMMARY)
-
+      const chartRes = await getTransactionsChart(year)
       const chartItems = chartRes.data.data?.data ?? []
       const buyArr  = Array(12).fill(0)
       const sellArr = Array(12).fill(0)
@@ -82,6 +73,26 @@ export default function TradePage() {
       })
       setChartBuy(buyArr)
       setChartSell(sellArr)
+    } catch {}
+  }
+
+  const fetchAll = async () => {
+    setLoading(true)
+    try {
+      const [stocksRes, tradesRes, summaryRes] = await Promise.all([
+        getStocks(),
+        getTransactions(),
+        getTransactionsSummary(),
+      ])
+
+      const stockList = stocksRes.data.data ?? []
+      setStocks(stockList)
+      if (stockList.length > 0) {
+        setForm(f => ({ ...f, stockId: f.stockId || String(stockList[0].id) }))
+      }
+
+      setTrades(tradesRes.data.data ?? [])
+      setSummary(summaryRes.data.data ?? EMPTY_SUMMARY)
     } catch {
       // 오류 시 빈 상태 유지
     } finally {
@@ -90,6 +101,7 @@ export default function TradePage() {
   }
 
   useEffect(() => { fetchAll() }, [])
+  useEffect(() => { fetchChartData(chartYear) }, [chartYear])
 
   /* ── 거래 등록 ── */
   const handleAdd = async () => {
@@ -106,6 +118,7 @@ export default function TradePage() {
       })
       setForm(f => ({ ...f, quantity: '', price: '', brokerFee: '', transactionTax: '' }))
       await fetchAll()
+      fetchChartData(chartYear)
     } catch (err) {
       alert(err.response?.data?.message ?? '거래 등록에 실패했습니다')
     }
@@ -138,6 +151,7 @@ export default function TradePage() {
       })
       setEditModal(null)
       await fetchAll()
+      fetchChartData(chartYear)
     } catch (err) {
       alert(err.response?.data?.message ?? '수정에 실패했습니다')
     }
@@ -149,6 +163,7 @@ export default function TradePage() {
     try {
       await deleteTransaction(id)
       await fetchAll()
+      fetchChartData(chartYear)
     } catch (err) {
       alert(err.response?.data?.message ?? '삭제에 실패했습니다')
     }
@@ -159,11 +174,11 @@ export default function TradePage() {
     const label = TYPE_LABEL[t.type] ?? t.type
     if (filterType !== '전체' && label !== filterType) return false
     if (searchName) {
-      const name = stockMap[t.stockId] ?? ''
+      const name = stockMap[t.stockId]?.stockName ?? ''
       if (!name.toLowerCase().includes(searchName.toLowerCase())) return false
     }
     return true
-  }), [trades, filterType, searchName, stockMap])
+  }).sort((a, b) => a.date.localeCompare(b.date)), [trades, filterType, searchName, stockMap])
 
   /* ── 차트 ── */
   const chartData = {
@@ -208,12 +223,7 @@ export default function TradePage() {
       },
       y: {
         grid: { color: '#f4f4f4' },
-        ticks: {
-          font: { family: 'Outfit', size: 10 }, color: '#bbb',
-          callback: v => v >= 1_000_000 ? (v / 1_000_000).toFixed(0) + 'M'
-                       : v >= 1_000    ? (v / 1_000).toFixed(0) + 'K'
-                       : v,
-        },
+        ticks: { display: false },
         border: { display: false },
       },
     },
@@ -234,7 +244,18 @@ export default function TradePage() {
       <div className="tp-top-row">
 
         <div className="tp-card tp-chart-card">
-          <p className="tp-card-title">매수/매도 금액 추이</p>
+          <div className="tp-chart-header">
+            <p className="tp-card-title">연도별 매수/매도 금액 추이</p>
+            <select
+              className="tp-year-select"
+              value={chartYear}
+              onChange={e => setChartYear(Number(e.target.value))}
+            >
+              {tradeYears.map(y => (
+                <option key={y} value={y}>{y}년</option>
+              ))}
+            </select>
+          </div>
           <div className="tp-chart-wrap">
             {loading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#bbb' }}>
@@ -306,8 +327,8 @@ export default function TradePage() {
             <input className="tp-fi tp-fi-sm" type="number" placeholder="수량" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
             <input className="tp-fi tp-fi-md" type="number" placeholder="단가 (원)" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
             <input className="tp-fi tp-fi-date" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-            <input className="tp-fi tp-fi-sm" type="number" placeholder="위탁기관 수수료" value={form.brokerFee} onChange={e => setForm(f => ({ ...f, brokerFee: e.target.value }))} />
-            <input className="tp-fi tp-fi-sm" type="number" placeholder="유관기관 제비용" value={form.transactionTax} onChange={e => setForm(f => ({ ...f, transactionTax: e.target.value }))} />
+            <input className="tp-fi tp-fi-fee" type="number" placeholder="위탁기관 수수료" value={form.brokerFee} onChange={e => setForm(f => ({ ...f, brokerFee: e.target.value }))} />
+            <input className="tp-fi tp-fi-fee" type="number" placeholder="유관기관 제비용" value={form.transactionTax} onChange={e => setForm(f => ({ ...f, transactionTax: e.target.value }))} />
 
             <div className="tp-form-total">
               <span className="tp-form-total-label">총액</span>
@@ -365,7 +386,7 @@ export default function TradePage() {
                   <th className="right">단가</th>
                   <th className="right has-tip" data-tip="매수·매도 시 모두 발생하는 증권사 위탁 수수료입니다.">위탁기관<br />수수료</th>
                   <th className="right has-tip" data-tip="매도 시에만 발생하는 거래소·예탁결제원 등 유관기관 수수료입니다.">유관기관<br />제비용</th>
-                  <th className="right">총액</th>
+                  <th className="right">평가 손익</th>
                   <th className="center">수정/삭제</th>
                 </tr>
               </thead>
@@ -374,13 +395,16 @@ export default function TradePage() {
                   <tr><td colSpan={9} className="tp-empty">거래 내역이 없습니다.</td></tr>
                 ) : filtered.map(t => {
                   const label = TYPE_LABEL[t.type] ?? t.type
-                  const total = t.type === 'BUY'
-                    ? t.quantity * t.price + (t.brokerFee ?? 0)
-                    : t.quantity * t.price - (t.brokerFee ?? 0) - (t.transactionTax ?? 0)
+                  const prevClose = stockMap[t.stockId]?.previousClose
+                    ? Number(stockMap[t.stockId].previousClose)
+                    : null
+                  const pnl = (t.type === 'BUY' && prevClose !== null)
+                    ? Math.round((prevClose - t.price) * t.quantity)
+                    : null
                   return (
                     <tr key={t.id}>
                       <td className="tp-date">{t.date}</td>
-                      <td className="tp-stock-name">{stockMap[t.stockId] ?? `ID:${t.stockId}`}</td>
+                      <td className="tp-stock-name">{stockMap[t.stockId]?.stockName ?? `ID:${t.stockId}`}</td>
                       <td className="center">
                         <span className={`tp-type-badge ${typeClass(label)}`}>{label}</span>
                       </td>
@@ -388,8 +412,8 @@ export default function TradePage() {
                       <td className="right">{fmt(t.price)}</td>
                       <td className="right">{t.brokerFee > 0 ? fmt(t.brokerFee) : '—'}</td>
                       <td className="right">{t.transactionTax > 0 ? fmt(t.transactionTax) : '—'}</td>
-                      <td className={`right tp-total ${t.type === 'BUY' ? 'outflow' : 'inflow'}`}>
-                        {t.type === 'BUY' ? '-' : '+'}{fmt(Math.abs(total))}
+                      <td className={`right tp-total ${pnl === null ? '' : pnl >= 0 ? 'inflow' : 'outflow'}`}>
+                        {pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}${fmt(pnl)}`}
                       </td>
                       <td className="center">
                         <button className="tp-btn-edit" onClick={() => openEditModal(t)}>수정</button>
