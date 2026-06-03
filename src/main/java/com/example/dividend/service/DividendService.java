@@ -266,7 +266,7 @@ public class DividendService {
     // ── [4] 월별 배당금 조회 (기존 호환) ─────────────────────────────────────
 
     public List<Map<String, Object>> getMonthly(Long userId, int year) {
-        Map<Long, Stock> stockMap = activeStockMap(userId);
+        Map<Long, Stock> stockMap = heldStockMap(userId); // 순보유 > 0 종목만 (거래 0 종목 제외)
         Map<Long, LocalDate> firstBuyMap = buildFirstBuyDateMap(userId);
 
         List<Dividend> dividends = dividendRepository.findByUserIdAndYear(userId, year).stream()
@@ -301,7 +301,7 @@ public class DividendService {
     // ── [5] 연간 예상 배당금 ──────────────────────────────────────────────────
 
     public Map<String, Object> getAnnual(Long userId, int year) {
-        Map<Long, Stock> stockMap = activeStockMap(userId);
+        Map<Long, Stock> stockMap = heldStockMap(userId); // 순보유 > 0 종목만 (거래 0 종목 제외)
         Map<Long, LocalDate> firstBuyMap = buildFirstBuyDateMap(userId);
 
         long total = dividendRepository.findByUserIdAndYear(userId, year).stream()
@@ -325,9 +325,9 @@ public class DividendService {
 
     public Map<String, Object> getCumulative(Long userId) {
         // JPQL 집계 쿼리의 @SQLRestriction 적용 불안정 회피 → Java 레벨 집계
-        Set<Long> activeIds = activeStockIds(userId);
+        Set<Long> heldIds = heldStockIds(userId); // 순보유 > 0 종목만 (거래 0 종목 제외)
         List<Dividend> all = dividendRepository.findByUserId(userId).stream()
-                .filter(d -> activeIds.contains(d.getStockId()))
+                .filter(d -> heldIds.contains(d.getStockId()))
                 .collect(Collectors.toList());
         long totalConfirmed = all.stream()
                 .filter(d -> "CONFIRMED".equals(d.getStatus()) && d.getConfirmedAmount() != null)
@@ -347,9 +347,9 @@ public class DividendService {
 
     public List<Map<String, Object>> getYearly(Long userId) {
         // JPQL 집계 쿼리의 @SQLRestriction 적용 불안정 회피 → Java 레벨 집계
-        Set<Long> activeIds = activeStockIds(userId);
+        Set<Long> heldIds = heldStockIds(userId); // 순보유 > 0 종목만 (거래 0 종목 제외)
         List<Dividend> all = dividendRepository.findByUserId(userId).stream()
-                .filter(d -> activeIds.contains(d.getStockId()))
+                .filter(d -> heldIds.contains(d.getStockId()))
                 .collect(Collectors.toList());
 
         // 연도별 그룹핑
@@ -428,6 +428,10 @@ public class DividendService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "종목을 찾을 수 없습니다"));
 
         int qty = transactionRepository.calculateNetQuantity(req.getStockId());
+        // 보유 이력이 전혀 없는 종목(거래 0건)은 차단. 전량 매도(거래 있고 net 0)는 허용.
+        if (qty <= 0 && transactionRepository.findByUserIdAndStockId(userId, req.getStockId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "보유 이력이 없는 종목은 배당을 확정할 수 없습니다");
+        }
         if (qty < 1) qty = 1;
 
         BigDecimal confirmedAmt = BigDecimal.valueOf((long) req.getDividendPerShare() * qty);
@@ -506,6 +510,36 @@ public class DividendService {
     private Map<Long, Stock> activeStockMap(Long userId) {
         return stockRepository.findByUser_Id(userId).stream()
                 .collect(Collectors.toMap(Stock::getId, s -> s));
+    }
+
+    /**
+     * 거래기반 순보유수량 Map<stockId, qty> — 소프트딜리트 제외 + 순보유 > 0 인 종목만.
+     * 배당 조회 5종(getAnnual/getCumulative/getMonthly/getYearly/getByStock)의 보유 게이트 공통 소스.
+     * Transaction을 userId 스코프로 1회만 순회해 합산 (N+1 및 비-userId 스코프 calculateNetQuantity 회피).
+     */
+    private Map<Long, Integer> heldQtyMap(Long userId) {
+        Set<Long> activeIds = activeStockIds(userId);
+        Map<Long, Integer> netQty = new HashMap<>();
+        for (Transaction t : transactionRepository.findByUserId(userId)) {
+            if (!activeIds.contains(t.getStockId())) continue;
+            int signed = "BUY".equals(t.getType()) ? t.getQuantity() : -t.getQuantity();
+            netQty.merge(t.getStockId(), signed, Integer::sum);
+        }
+        netQty.values().removeIf(q -> q <= 0); // 순보유 0 이하(미보유·전량 매도) 제외
+        return netQty;
+    }
+
+    /** 거래기반 순보유수량 > 0 인 종목 ID 집합 (보유 게이트). */
+    private Set<Long> heldStockIds(Long userId) {
+        return heldQtyMap(userId).keySet();
+    }
+
+    /** 거래기반 순보유수량 > 0 인 종목 Map<stockId, Stock> (보유 게이트 + createdAt 접근). */
+    private Map<Long, Stock> heldStockMap(Long userId) {
+        Set<Long> held = heldStockIds(userId);
+        return activeStockMap(userId).entrySet().stream()
+                .filter(e -> held.contains(e.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
@@ -675,7 +709,13 @@ public class DividendService {
         Stock stock = stockRepository.findByIdAndUser_Id(req.getStockId(), userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "종목을 찾을 수 없습니다"));
 
-        int qty = Math.max(transactionRepository.calculateNetQuantity(req.getStockId()), 1);
+        // 보유 이력이 전혀 없는 종목(거래 0건)에 CONFIRMED 배당 생성 차단.
+        // 단, 과거 보유 후 전량 매도(거래는 있으나 net 0)는 실수령 기록일 수 있어 허용.
+        int net = transactionRepository.calculateNetQuantity(req.getStockId());
+        if (net <= 0 && transactionRepository.findByUserIdAndStockId(userId, req.getStockId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "보유 이력이 없는 종목은 배당을 확정할 수 없습니다");
+        }
+        int qty = Math.max(net, 1);
         LocalDate paymentDate = req.getFirstPaymentDate();
         long dividendAmount = req.getDividendAmount();
 
@@ -733,7 +773,8 @@ public class DividendService {
     // ── [NEW-3] 종목별 배당 정보 조회 (paymentDate 기준, null 제외) ───────────
 
     public List<StockDividendResponse> getByStock(Long userId, int year) {
-        Map<Long, Stock> stockMap = activeStockMap(userId);
+        Map<Long, Integer> qtyMap = heldQtyMap(userId);   // 순보유 > 0 종목 + 수량 (공통 보유 게이트)
+        Map<Long, Stock> stockMap = heldStockMap(userId); // 거래 0 종목 제외
         Map<Long, LocalDate> firstBuyMap = buildFirstBuyDateMap(userId);
 
         // 컷오프 2: paymentDate 연도가 현재 연도인 것만 (2027 등 익년 지급분 미표시)
@@ -753,7 +794,8 @@ public class DividendService {
             Stock stock = stockMap.get(stockId);
             if (stock == null) continue;
 
-            int qty = Math.max(transactionRepository.calculateNetQuantity(stockId), 1);
+            // 보유 게이트(heldStockMap)로 이미 순보유 > 0 보장 → qtyMap 값 사용
+            int qty = qtyMap.getOrDefault(stockId, 1);
             LocalDate firstBuyDate = firstBuyMap.get(stockId);
 
             List<Map<String, Object>> paymentDates = divs.stream()
