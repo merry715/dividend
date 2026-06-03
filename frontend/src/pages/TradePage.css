@@ -52,6 +52,35 @@
   min-width: 0;
 }
 
+.tp-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.tp-chart-header .tp-card-title {
+  margin-bottom: 0;
+}
+
+.tp-year-select {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.tp-year-select:focus { border-color: #1D9E75; }
+
 .tp-chart-wrap {
   flex: 1;
   min-height: 0;
@@ -142,6 +171,7 @@
 .tp-fi-name { width: 130px; }
 .tp-fi-sm   { width: 80px; }
 .tp-fi-md   { width: 110px; }
+.tp-fi-fee  { width: 130px; }
 .tp-fi-date { width: 140px; color: #555; cursor: pointer; }
 
 /* 거래유형 탭 */
@@ -225,7 +255,7 @@
   background: #f9f9f9;
   border: 1px solid #ebebeb;
   border-radius: 14px;
-  overflow: hidden;
+  isolation: isolate;
 }
 
 /* 필터 + 검색 컨트롤 바 */
@@ -324,7 +354,6 @@
 
 /* 툴팁 헤더 */
 .tp-table thead th.has-tip {
-  position: relative;
   cursor: help;
   white-space: normal;
   line-height: 1.4;
