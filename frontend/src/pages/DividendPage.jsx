@@ -104,7 +104,6 @@ export default function DividendPage() {
     Array.from({ length: 12 }, (_, i) => {
       const month = i + 1
       const found = monthlyData.find(m => m.month === month)
-<<<<<<< HEAD
       const monthDivs = dividendList.filter(d =>
         d.year === CURRENT_YEAR && d.month === month && d.paymentDate != null
       )
