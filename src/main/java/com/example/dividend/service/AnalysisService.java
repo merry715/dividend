@@ -28,6 +28,7 @@ public class AnalysisService {
     private final DividendRepository dividendRepository;
     private final GoalRepository     goalRepository;
     private final HoldingService     holdingService;
+    private final DividendService    dividendService;
 
     public GoalAchievementResponse getGoalAchievement(Long userId) {
         int currentYear = LocalDate.now().getYear();
@@ -180,15 +181,7 @@ public class AnalysisService {
     }
 
     private int calcAnnualDividend(Long userId, int year) {
-        List<Stock> stocks = stockRepository.findByUser_Id(userId);
-        if (stocks.isEmpty()) return 0;
-
-        List<Long> stockIds = stocks.stream().map(Stock::getId).toList();
-        return dividendRepository.findByStockIdIn(stockIds).stream()
-                .filter(d -> d.getYear() == year)
-                .mapToInt(d -> "CONFIRMED".equals(d.getStatus())
-                        ? (d.getConfirmedAmount() != null ? d.getConfirmedAmount().intValue() : 0)
-                        : (d.getExpectedAmount()  != null ? d.getExpectedAmount().intValue()  : 0))
-                .sum();
+        Map<String, Object> annual = dividendService.getAnnual(userId, year);
+        return ((Number) annual.get("totalExpectedAmount")).intValue();
     }
 }
