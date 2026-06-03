@@ -55,6 +55,17 @@ public interface DividendRepository extends JpaRepository<Dividend, Long> {
         @Param("stockId") Long stockId);
 
 
+    // 과거 연도(작년 이하) 배당 전체 삭제 — 거래 변경 시 과거 배당 재계산용 (올해 row는 보존)
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("""
+        DELETE FROM Dividend d
+        WHERE d.userId = :userId AND d.stockId = :stockId AND d.year < :currentYear
+        """)
+    void deletePastByUserIdAndStockId(
+        @Param("userId") Long userId,
+        @Param("stockId") Long stockId,
+        @Param("currentYear") int currentYear);
+
     // 스케줄 업데이트 시 전체 삭제 (CONFIRMED 포함)
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("""
