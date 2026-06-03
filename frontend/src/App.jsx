@@ -53,6 +53,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
         <Route element={
           <PrivateRoute>
             <MainLayout
@@ -70,7 +71,6 @@ export default function App() {
           <Route path="/dividends"    element={<DividendPage />} />
           <Route path="/analysis"     element={<AnalysisPage />} />
           <Route path="/rebalancing"  element={<div />} />
-          <Route path="/admin"        element={<AdminPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
