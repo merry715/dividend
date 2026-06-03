@@ -3,8 +3,10 @@ package com.example.dividend.service;
 import com.example.dividend.dto.request.TransactionCreateRequest;
 import com.example.dividend.dto.request.TransactionUpdateRequest;
 import com.example.dividend.entity.Transaction;
+import com.example.dividend.repository.DividendRepository;
 import com.example.dividend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -12,10 +14,26 @@ import java.util.*;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final DividendRepository dividendRepository;
 
-    public TransactionService(TransactionRepository transactionRepository) {
+    public TransactionService(TransactionRepository transactionRepository,
+                              DividendRepository dividendRepository) {
         this.transactionRepository = transactionRepository;
+        this.dividendRepository = dividendRepository;
     }
+
+    /**
+     * 거래 변경 후 순보유수량이 0 이하가 된 종목의 EXPECTED 배당 row 정리.
+     * 거래 삭제·전량 매도로 미보유가 되면 고아 EXPECTED 배당이 남는 것을 방지 (read-side 보유 게이트의 보완).
+     * CONFIRMED(실수령 기록일 수 있음)는 절대 삭제하지 않음.
+     */
+    private void cleanupExpectedDividendsIfUnheld(Long userId, Long stockId) {
+        if (userId == null || stockId == null) return;
+        if (transactionRepository.calculateNetQuantity(stockId) <= 0) {
+            dividendRepository.deleteExpectedByUserIdAndStockId(userId, stockId);
+        }
+    }
+
 
     public List<Transaction> getAll(Long userId, Integer year, String type) {
         if (year != null && type != null) {
@@ -30,6 +48,7 @@ public class TransactionService {
         return transactionRepository.findActiveByUserId(userId);
     }
 
+    @Transactional
     public Transaction add(Long userId, TransactionCreateRequest req) {
         Transaction t = new Transaction();
         t.setUserId(userId);
@@ -40,8 +59,13 @@ public class TransactionService {
         t.setDate(req.getDate());
         t.setBrokerFee(req.getBrokerFee());
         t.setTransactionTax(req.getTransactionTax());
-        return transactionRepository.save(t);
+        Transaction saved = transactionRepository.save(t);
+        // 전량 매도 등으로 순보유가 0이 되면 EXPECTED 배당 정리
+        cleanupExpectedDividendsIfUnheld(userId, saved.getStockId());
+        return saved;
     }
+
+    @Transactional
 
     public Transaction update(Long id, TransactionUpdateRequest req) {
         Transaction t = transactionRepository.findById(id)
@@ -54,14 +78,21 @@ public class TransactionService {
         if (req.getBrokerFee()      != null) t.setBrokerFee(req.getBrokerFee());
         if (req.getTransactionTax() != null) t.setTransactionTax(req.getTransactionTax());
 
-        return transactionRepository.save(t);
+        Transaction saved = transactionRepository.save(t);
+        // 수량·유형 수정으로 순보유가 0이 되면 EXPECTED 배당 정리
+        cleanupExpectedDividendsIfUnheld(saved.getUserId(), saved.getStockId());
+        return saved;
     }
 
+    @Transactional
     public void delete(Long id) {
-        if (!transactionRepository.existsById(id)) {
-            throw new NoSuchElementException("거래를 찾을 수 없습니다: " + id);
-        }
+        Transaction t = transactionRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("거래를 찾을 수 없습니다: " + id));
+        Long userId = t.getUserId();
+        Long stockId = t.getStockId();
         transactionRepository.deleteById(id);
+        // 삭제로 순보유가 0이 되면 EXPECTED 배당 정리 (CONFIRMED 보존)
+        cleanupExpectedDividendsIfUnheld(userId, stockId);
     }
 
     public List<Transaction> getByStockId(Long userId, Long stockId) {
