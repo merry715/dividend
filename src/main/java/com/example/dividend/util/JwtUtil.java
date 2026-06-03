@@ -46,7 +46,8 @@ public class JwtUtil {
     }
 
     public String extractRole(String token) {
-        return getClaims(token).get("role", String.class);
+        String role = getClaims(token).get("role", String.class);
+        return role != null ? role : "ROLE_USER";
     }
 
     public boolean isTokenValid(String token) {
