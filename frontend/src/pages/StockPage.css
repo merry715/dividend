@@ -49,7 +49,7 @@
   margin: 0 0 10px;
 }
 
-/* ── 상단 행 (폼 + 요약) ── */
+/* ── 상단 행 (폼 + 섹터 비중) ── */
 .sp-top-row {
   display: flex;
   gap: 12px;
@@ -101,11 +101,9 @@
 }
 
 .sp-input.name  { width: 100%; box-sizing: border-box; }
-.sp-input.qty   { width: 90px;  flex-shrink: 0; }
-.sp-input.price { width: 110px; flex-shrink: 0; }
 .sp-select      { flex: 1; min-width: 90px; }
 
-/* 자동완성 래퍼 — name input 을 감싸는 flex 항목 */
+/* 자동완성 래퍼 */
 .sp-autocomplete-wrap {
   position: relative;
   flex: 1;
@@ -174,94 +172,66 @@
 .sp-add-btn:hover { background: #189068; }
 .sp-add-btn:disabled { background: #ccc; cursor: default; }
 
-/* ── 투자 합계 카드 ── */
-.sp-summary-card {
+/* ── 섹터 비중 카드 (상단 오른쪽) ── */
+.sp-sector-card {
   width: 280px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
 }
 
-.sp-summary-list {
+.sp-sector-list {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   overflow-y: auto;
-  overflow-x: visible;
 }
 
-.sp-summary-item {
+.sp-sector-item {
   display: flex;
   align-items: center;
   gap: 7px;
 }
 
-.sp-summary-dot {
+.sp-sector-dot {
   width: 8px;
   height: 8px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
-.sp-summary-name {
-  font-size: 11px;
+.sp-sector-name {
+  font-size: 12px;
+  font-weight: 600;
   color: #555;
-  width: 62px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: 80px;
   flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.sp-pct-bar {
+.sp-sector-bar-bg {
   flex: 1;
-  min-width: 0;
-  height: 5px;
-  background: #e8e8e8;
+  height: 6px;
+  background: #f0f0f0;
   border-radius: 3px;
   overflow: hidden;
 }
 
-.sp-pct-fill {
+.sp-sector-bar-fill {
   height: 100%;
   border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
-.sp-summary-pct {
+.sp-sector-pct {
   font-size: 11px;
-  font-weight: 600;
-  color: #333;
-  width: 36px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.sp-summary-totals {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #ebebeb;
-  display: flex;
-  justify-content: space-between;
-}
-
-.sp-summary-total-item {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sp-summary-total-label {
-  font-size: 9px;
-  color: #aaa;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.sp-summary-total-value {
-  font-size: 13px;
   font-weight: 700;
   color: #333;
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* ── 중단 행 (상세 패널 + 테이블) ── */
@@ -282,37 +252,6 @@
   border: 1px solid #ebebeb;
   border-radius: 14px;
   overflow: hidden;
-}
-
-/* 필터 탭 */
-.sp-filters {
-  display: flex;
-  gap: 6px;
-  padding: 12px 16px 10px;
-  flex-shrink: 0;
-  border-bottom: 1px solid #ebebeb;
-}
-
-.sp-filter-tab {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background: transparent;
-  color: #888;
-  font-family: 'Outfit', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.sp-filter-tab:hover { border-color: #1D9E75; color: #1D9E75; }
-
-.sp-filter-tab.active {
-  background: #1D9E75;
-  color: #fff;
-  border-color: #1D9E75;
-  font-weight: 600;
 }
 
 /* 테이블 래퍼 */
@@ -371,19 +310,6 @@
   font-weight: 600;
   color: #1D9E75;
 }
-
-.sp-table td.profit { color: #639922; font-weight: 600; }
-.sp-table td.loss   { color: #E24B4A; font-weight: 600; }
-
-.sp-type-badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-
-.sp-type-badge.buy  { background: #E1F5EE; color: #1D9E75; }
-.sp-type-badge.sell { background: #FEE2E2; color: #E24B4A; }
 
 /* 수정 / 삭제 버튼 */
 .sp-btn-edit,
@@ -449,16 +375,13 @@
   overflow: hidden;
 }
 
-/* 카드 상단 바 (로고+이름 + 닫기) */
 .sp-detail-top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding-bottom: 0;
 }
 
-/* 닫기 버튼 (인라인) */
 .sp-detail-close {
   width: 26px;
   height: 26px;
@@ -482,7 +405,6 @@
   color: #E24B4A;
 }
 
-/* 카드 스크롤 바디 */
 .sp-detail-body {
   flex: 1;
   min-height: 0;
@@ -491,7 +413,6 @@
   flex-direction: column;
 }
 
-/* 헤더: 로고 + 종목명 */
 .sp-detail-top {
   display: flex;
   align-items: center;
@@ -529,36 +450,6 @@
   font-weight: 500;
 }
 
-/* 별표 버튼 */
-.sp-detail-star {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  color: #ccc;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.15s;
-  line-height: 1;
-}
-
-.sp-detail-star:hover {
-  border-color: #F5B800;
-  color: #F5B800;
-}
-
-.sp-detail-star.active {
-  border-color: #F5B800;
-  color: #F5B800;
-  background: #FFF9E6;
-}
-
-/* 구분선 */
 .sp-detail-divider {
   height: 1px;
   background: #E1F5EE;
@@ -566,7 +457,6 @@
   flex-shrink: 0;
 }
 
-/* 섹션 레이블 */
 .sp-detail-section-label {
   font-size: 10px;
   font-weight: 600;
@@ -577,7 +467,6 @@
   flex-shrink: 0;
 }
 
-/* 배당 정보 그리드 */
 .sp-detail-items {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -618,7 +507,6 @@
   letter-spacing: 0;
 }
 
-/* 하단 버튼 */
 .sp-detail-footer {
   display: flex;
   gap: 8px;
@@ -653,7 +541,7 @@
 
 .sp-detail-btn-delete:hover { background: #FEE2E2; }
 
-/* ── 수정 모달 ── */
+/* ── 섹터 수정 모달 ── */
 .sp-modal-overlay {
   position: fixed;
   inset: 0;
@@ -668,7 +556,7 @@
   background: #fff;
   border-radius: 16px;
   padding: 24px;
-  width: 360px;
+  width: 320px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
 }
 
@@ -697,7 +585,7 @@
   letter-spacing: 0.05em;
 }
 
-.sp-modal-input {
+.sp-modal-select {
   height: 38px;
   padding: 0 12px;
   border: 1px solid #ddd;
@@ -705,11 +593,12 @@
   font-family: 'Outfit', sans-serif;
   font-size: 14px;
   color: #333;
+  background: #fff;
   outline: none;
   transition: border-color 0.15s;
 }
 
-.sp-modal-input:focus { border-color: #1D9E75; }
+.sp-modal-select:focus { border-color: #1D9E75; }
 
 .sp-modal-actions {
   display: flex;
@@ -749,138 +638,6 @@
 .sp-modal-save:hover { background: #189068; }
 .sp-modal-save:disabled { background: #ccc; cursor: default; }
 
-/* ── 하단 행: 섹터비중 + 수익/손실 ── */
-.sp-bottom-row {
-  flex: 0 0 172px;
-  display: flex;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.sp-sector-card,
-.sp-pnl-card {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 섹터별 비중 리스트 */
-.sp-sector-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  overflow-y: auto;
-}
-
-.sp-sector-item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.sp-sector-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.sp-sector-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: #555;
-  width: 80px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.sp-sector-bar-bg {
-  flex: 1;
-  height: 6px;
-  background: #f0f0f0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.sp-sector-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.sp-sector-pct {
-  font-size: 11px;
-  font-weight: 700;
-  color: #333;
-  width: 32px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-/* 종목별 수익/손실 리스트 */
-.sp-pnl-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  overflow-y: auto;
-}
-
-.sp-pnl-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.sp-pnl-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: #555;
-  width: 76px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.sp-pnl-bar-bg {
-  flex: 1;
-  height: 6px;
-  background: #f0f0f0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.sp-pnl-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.sp-pnl-bar-fill.profit { background: #1D9E75; }
-.sp-pnl-bar-fill.loss   { background: #E24B4A; }
-
-.sp-pnl-amount {
-  font-size: 11px;
-  font-weight: 700;
-  width: 66px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.sp-pnl-pct {
-  font-size: 11px;
-  font-weight: 600;
-  width: 40px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.sp-pnl-amount.profit, .sp-pnl-pct.profit { color: #639922; }
-.sp-pnl-amount.loss,   .sp-pnl-pct.loss   { color: #E24B4A; }
-
 @media (max-width: 768px) {
   .sp-page {
     height: auto;
@@ -893,9 +650,10 @@
     height: auto;
   }
 
-  .sp-summary-card {
+  .sp-sector-card {
     width: 100%;
     flex-shrink: 0;
+    height: 160px;
   }
 
   .sp-middle-row {
@@ -917,16 +675,5 @@
   .sp-detail-panel.open {
     width: 100%;
     height: 340px;
-  }
-
-  .sp-bottom-row {
-    flex: 0 0 auto;
-    height: auto;
-    flex-direction: column;
-  }
-
-  .sp-sector-card,
-  .sp-pnl-card {
-    height: 160px;
   }
 }
