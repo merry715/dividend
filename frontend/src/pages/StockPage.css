@@ -61,26 +61,33 @@
 
 /* ── 종목 추가 폼 ── */
 .sp-form-card {
-  flex: 1;
+  flex: 2;
   min-width: 0;
   overflow: visible;
 }
 
-.sp-form-row {
+.sp-form-rows {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-form-row-top,
+.sp-form-row-bottom {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
 }
 
 .sp-input,
 .sp-select {
-  height: 36px;
-  padding: 0 10px;
+  height: 30px;
+  padding: 0 9px;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 7px;
   font-family: 'Outfit', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   color: #333;
   background: #fff;
   outline: none;
@@ -154,14 +161,14 @@
 }
 
 .sp-add-btn {
-  height: 36px;
-  padding: 0 18px;
+  height: 30px;
+  padding: 0 14px;
   background: #1D9E75;
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 7px;
   font-family: 'Outfit', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -174,8 +181,8 @@
 
 /* ── 섹터 비중 카드 (상단 오른쪽) ── */
 .sp-sector-card {
-  width: 280px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -183,37 +190,47 @@
 .sp-sector-list {
   flex: 1;
   display: flex;
+  flex-direction: row;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.sp-sector-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
-  gap: 7px;
-  overflow-y: auto;
+  gap: 6px;
 }
 
 .sp-sector-item {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
 }
 
 .sp-sector-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 2px;
   flex-shrink: 0;
 }
 
 .sp-sector-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #555;
-  width: 80px;
+  width: 72px;
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sp-sector-bar-bg {
   flex: 1;
-  height: 6px;
+  min-width: 16px;
+  height: 5px;
   background: #f0f0f0;
   border-radius: 3px;
   overflow: hidden;
@@ -226,10 +243,10 @@
 }
 
 .sp-sector-pct {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #333;
-  width: 32px;
+  width: 26px;
   text-align: right;
   flex-shrink: 0;
 }
@@ -266,6 +283,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
 }
 
 .sp-table thead th {
@@ -278,15 +296,11 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 10px 12px;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
   z-index: 1;
+  width: 20%;
 }
-
-.sp-table thead th.right { text-align: right; }
-.sp-table thead th.center { text-align: center; }
-.sp-table thead th.narrow,
-.sp-table tbody td.narrow { padding-left: 6px; padding-right: 6px; }
 
 .sp-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
@@ -301,10 +315,8 @@
   padding: 10px 12px;
   color: #333;
   white-space: nowrap;
+  text-align: center;
 }
-
-.sp-table tbody td.right { text-align: right; }
-.sp-table tbody td.center { text-align: center; }
 
 .sp-table td.stock-name {
   font-weight: 600;
@@ -637,6 +649,19 @@
 
 .sp-modal-save:hover { background: #189068; }
 .sp-modal-save:disabled { background: #ccc; cursor: default; }
+
+@media (max-width: 1100px) {
+  .sp-form-row-top {
+    grid-template-columns: 1fr auto;
+  }
+  .sp-add-btn {
+    grid-column: 1 / -1;
+  }
+  .sp-sector-list {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
 
 @media (max-width: 768px) {
   .sp-page {

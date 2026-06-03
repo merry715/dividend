@@ -31,7 +31,19 @@ const SECTORS = [
   { code: 'UTILITIES',              label: '유틸리티' },
   { code: 'REAL_ESTATE',            label: '부동산' },
 ]
-const SECTOR_COLORS = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#C8EFE3', '#DDF0E9', '#E8F7F1']
+const SECTOR_COLORS = [
+  '#0A4D35', // 다크 포레스트
+  '#1D9E75', // 브랜드 그린
+  '#1B8074', // 다크 틸
+  '#27AE60', // 에메랄드
+  '#40916C', // 세이지
+  '#2ECC71', // 브라이트 그린
+  '#52B788', // 씨폼
+  '#1B9981', // 틸 그린
+  '#74C69D', // 연한 그린
+  '#95D5B2', // 페일 민트
+  '#C8EFE3', // 아이보리 그린
+]
 
 const EMPTY_FORM = { stockName: '', stockCode: '', sector: 'IT' }
 const EMPTY_EDIT = { open: false, stock: null, sector: 'IT' }
@@ -166,6 +178,8 @@ export default function StockPage() {
     }
   }
 
+  const sectorLeftCount = Math.max(1, Math.floor(sectorWeights.length / 2))
+
   return (
     <div className="sp-page">
 
@@ -180,48 +194,52 @@ export default function StockPage() {
 
         <div className="sp-card sp-form-card">
           <p className="sp-card-title">종목 추가</p>
-          <div className="sp-form-row">
-            <div className="sp-autocomplete-wrap" ref={suggestionRef}>
+          <div className="sp-form-rows">
+            <div className="sp-form-row-top">
+              <div className="sp-autocomplete-wrap" ref={suggestionRef}>
+                <input
+                  className="sp-input name"
+                  placeholder="종목명 검색"
+                  value={form.stockName}
+                  onChange={e => handleStockNameChange(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                  autoComplete="off"
+                />
+                {showSuggestions && (
+                  <ul className="sp-suggestions">
+                    {suggestions.map(item => (
+                      <li key={item.stockCode} className="sp-suggestion-item"
+                          onMouseDown={() => selectSuggestion(item)}>
+                        <span className="sp-sug-name">{item.stockName}</span>
+                        <span className="sp-sug-code">{item.stockCode}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <input
-                className="sp-input name"
-                placeholder="종목명 검색"
-                value={form.stockName}
-                onChange={e => handleStockNameChange(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                autoComplete="off"
+                className="sp-input code"
+                placeholder="종목코드"
+                value={form.stockCode}
+                readOnly
               />
-              {showSuggestions && (
-                <ul className="sp-suggestions">
-                  {suggestions.map(item => (
-                    <li key={item.stockCode} className="sp-suggestion-item"
-                        onMouseDown={() => selectSuggestion(item)}>
-                      <span className="sp-sug-name">{item.stockName}</span>
-                      <span className="sp-sug-code">{item.stockCode}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <button
+                className="sp-add-btn"
+                onClick={handleAdd}
+                disabled={!form.stockName.trim() || !form.stockCode.trim()}
+              >
+                추가하기
+              </button>
             </div>
-            <input
-              className="sp-input code"
-              placeholder="종목코드"
-              value={form.stockCode}
-              readOnly
-            />
-            <select
-              className="sp-select"
-              value={form.sector}
-              onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}
-            >
-              {SECTORS.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
-            </select>
-            <button
-              className="sp-add-btn"
-              onClick={handleAdd}
-              disabled={!form.stockName.trim() || !form.stockCode.trim()}
-            >
-              추가하기
-            </button>
+            <div className="sp-form-row-bottom">
+              <select
+                className="sp-select"
+                value={form.sector}
+                onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}
+              >
+                {SECTORS.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -230,16 +248,34 @@ export default function StockPage() {
           <div className="sp-sector-list">
             {sectorWeights.length === 0 ? (
               <span style={{ color: '#bbb', fontSize: 13 }}>데이터 없음</span>
-            ) : sectorWeights.map((sw, i) => (
-              <div key={sw.sector} className="sp-sector-item">
-                <span className="sp-sector-dot" style={{ background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
-                <span className="sp-sector-name">{sw.sector}</span>
-                <div className="sp-sector-bar-bg">
-                  <div className="sp-sector-bar-fill" style={{ width: `${sw.pct}%`, background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
+            ) : (
+              <>
+                <div className="sp-sector-col">
+                  {sectorWeights.slice(0, sectorLeftCount).map((sw, i) => (
+                    <div key={sw.sector} className="sp-sector-item">
+                      <span className="sp-sector-dot" style={{ background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
+                      <span className="sp-sector-name">{sw.sector}</span>
+                      <div className="sp-sector-bar-bg">
+                        <div className="sp-sector-bar-fill" style={{ width: `${sw.pct}%`, background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
+                      </div>
+                      <span className="sp-sector-pct">{sw.pct}%</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="sp-sector-pct">{sw.pct}%</span>
-              </div>
-            ))}
+                <div className="sp-sector-col">
+                  {sectorWeights.slice(sectorLeftCount).map((sw, i) => (
+                    <div key={sw.sector} className="sp-sector-item">
+                      <span className="sp-sector-dot" style={{ background: SECTOR_COLORS[(sectorLeftCount + i) % SECTOR_COLORS.length] }} />
+                      <span className="sp-sector-name">{sw.sector}</span>
+                      <div className="sp-sector-bar-bg">
+                        <div className="sp-sector-bar-fill" style={{ width: `${sw.pct}%`, background: SECTOR_COLORS[(sectorLeftCount + i) % SECTOR_COLORS.length] }} />
+                      </div>
+                      <span className="sp-sector-pct">{sw.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -357,9 +393,9 @@ export default function StockPage() {
                   <tr>
                     <th>종목명</th>
                     <th>종목코드</th>
-                    <th className="narrow">섹터</th>
-                    <th className="right narrow">보유수량</th>
-                    <th className="center">관리</th>
+                    <th>섹터</th>
+                    <th>보유수량</th>
+                    <th>관리</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -373,8 +409,8 @@ export default function StockPage() {
                     >
                       <td className="stock-name">{s.stockName}</td>
                       <td>{s.stockCode}</td>
-                      <td className="narrow">{s.sectorLabel ?? s.sectorCode ?? '-'}</td>
-                      <td className="right narrow">{fmt(s.quantity)}</td>
+                      <td>{s.sectorLabel ?? s.sectorCode ?? '-'}</td>
+                      <td>{fmt(s.quantity)}</td>
                       <td className="center" onClick={e => e.stopPropagation()}>
                         <button className="sp-btn-edit" onClick={e => openEdit(e, s)}>수정</button>
                         <button className="sp-btn-delete" onClick={() => handleDelete(s.id)}>삭제</button>
