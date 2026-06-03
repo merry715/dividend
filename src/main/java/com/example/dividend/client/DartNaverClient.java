@@ -120,10 +120,17 @@ public class DartNaverClient {
                 .filter(c -> c.getStockCode() != null && c.getStockCode().matches("\\d{6}"))
                 // KRX 교차 필터: 현재 거래가능 종목만 (캐시 미준비 시 건너뜀)
                 .filter(c -> !krxReady || activeKrxStocks.containsKey(c.getStockCode()))
-                // 이름 검색: KRX 현재 종목명 기준 (이름 변경 반영), fallback은 DART 이름
+                // 이름 또는 종목코드 검색
                 .filter(c -> {
                     String name = krxReady ? activeKrxStocks.get(c.getStockCode()) : c.getCorpName();
-                    return name != null && name.toLowerCase().contains(q);
+                    return (name != null && name.toLowerCase().contains(q))
+                            || c.getStockCode().contains(q);
+                })
+                // 정확 일치 → 시작 일치 → 포함 순 정렬 (slice 전에 정렬해야 KT 같은 단어가 밀리지 않음)
+                .sorted((a, b) -> {
+                    String nameA = krxReady ? activeKrxStocks.getOrDefault(a.getStockCode(), a.getCorpName()) : a.getCorpName();
+                    String nameB = krxReady ? activeKrxStocks.getOrDefault(b.getStockCode(), b.getCorpName()) : b.getCorpName();
+                    return rankMatch(nameA, a.getStockCode(), q) - rankMatch(nameB, b.getStockCode(), q);
                 })
                 .limit(10)
                 .map(c -> {
@@ -497,6 +504,22 @@ public class DartNaverClient {
             }
         }
         throw new RuntimeException("ZIP 파일 내 XML을 찾을 수 없습니다");
+    }
+
+    /**
+     * 검색어 매칭 우선순위 점수.
+     * 0: 종목명 또는 코드 정확 일치
+     * 1: 종목명이 검색어로 시작
+     * 2: 코드가 검색어로 시작
+     * 3: 포함(contains)
+     */
+    private static int rankMatch(String name, String code, String keyword) {
+        if (keyword == null || keyword.isBlank()) return 3;
+        String nameLower = name != null ? name.toLowerCase() : "";
+        if (nameLower.equals(keyword) || keyword.equals(code)) return 0;
+        if (nameLower.startsWith(keyword)) return 1;
+        if (code != null && code.startsWith(keyword)) return 2;
+        return 3;
     }
 
     private String getText(Element el, String tag) {
