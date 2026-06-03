@@ -37,11 +37,11 @@ export default function AdminPage() {
   useEffect(() => {
     async function load() {
       const [userStats, activeData, top10, sectorDist, dividendAvg] = await Promise.all([
-        apiFetch('/api/admin/stats/users'),
-        apiFetch('/api/admin/stats/users/active'),
-        apiFetch('/api/admin/stats/stocks/top10'),
-        apiFetch('/api/admin/stats/sectors'),
-        apiFetch('/api/admin/stats/dividends/average'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/users'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/users/active'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/stocks/top10'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/sectors'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/dividends/average'),
       ])
 
       setTotalUsers(userStats.totalUsers)
