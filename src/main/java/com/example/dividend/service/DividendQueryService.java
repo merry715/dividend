@@ -24,6 +24,7 @@ public class DividendQueryService {
 
     private final StockRepository stockRepository;
     private final DividendRepository dividendRepository;
+    private final HoldingService holdingService;
 
     public ExpectedDividendResponse getExpectedDividends(Long stockId, Long userId) {
         // fetch join으로 Stock + User를 단일 쿼리에 조회
@@ -34,11 +35,13 @@ public class DividendQueryService {
             throw new AccessForbiddenException("해당 종목에 접근할 권한이 없습니다");
         }
 
+        int netQty = holdingService.getNetQuantity(stockId);
+
         List<Dividend> dividends =
                 dividendRepository.findByStockIdOrderByYearDescMonthAsc(stockId);
 
         List<DividendItem> items = dividends.stream()
-                .map(d -> toItem(d, stock.getQuantity()))
+                .map(d -> toItem(d, netQty))
                 .toList();
 
         List<AnnualSummary> annualSummary = buildAnnualSummary(items);
@@ -48,7 +51,7 @@ public class DividendQueryService {
                 .stockCode(stock.getStockCode())
                 .stockName(stock.getStockName())
                 .currency(stock.getCurrency())
-                .quantity(stock.getQuantity())
+                .quantity(netQty)
                 .dividends(items)
                 .annualSummary(annualSummary)
                 .build();

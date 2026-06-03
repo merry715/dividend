@@ -35,3 +35,15 @@ export const confirmDividend = (id, body) =>
 
 export const generateDividends = (stockId, year) =>
   useMock ? mockGenerateDividends(year) : api.post('/dividends/generate', { stockId, year })
+
+export const getByStockYear = (year) =>
+  api.get('/dividends/by-stock', { params: { year } })
+
+export const confirmWithAutoGenerate = (body) =>
+  api.post('/dividends/confirm-with-auto-generate', body)
+
+export const updateDividend = (dividendId, body) =>
+  api.patch(`/dividends/${dividendId}`, body)
+
+export const getStocksForConfirm = (year) =>
+  api.get('/dividends/stocks-for-confirm', { params: { year } })

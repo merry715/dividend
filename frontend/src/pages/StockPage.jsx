@@ -1,10 +1,27 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import './StockPage.css'
 import logo from '../assets/logo.png'
-import { getStocks, createStock, updateStock, deleteStock, searchStocks } from '../api/stocks'
+import { getStocks, createStock, deleteStock, searchStocks } from '../api/stocks'
 
 const fmt = (n) => Number(n || 0).toLocaleString('ko-KR')
 const fmtSign = (n) => (n >= 0 ? '+' : '') + fmt(n)
+
+// 배당 주기별 연간 지급 횟수
+const CYCLE_COUNT = { MONTHLY: 12, QUARTERLY: 4, SEMI_ANNUAL: 2, ANNUAL: 1 }
+
+const CURRENT_YEAR = new Date().getFullYear()
+
+// 지급월 표시: 현재 연도면 "5월", 다른 연도면 "2027.4월"
+function formatPaymentMonth(dto, currentYear) {
+  if (dto.year === currentYear) return `${dto.month}월`
+  return `${dto.year}.${dto.month}월`
+}
+
+// 주당 예상 배당금(연간 합계) → 1회당 평균으로 변환
+function perPaymentDividend(annualPerShare, dividendCycle) {
+  const count = CYCLE_COUNT[dividendCycle] ?? 1
+  return Math.round(annualPerShare / count)
+}
 
 const SECTORS = [
   { code: 'IT',                     label: 'IT' },
@@ -22,15 +39,13 @@ const SECTORS = [
 const SUMMARY_COLORS = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#2DB589', '#C8EFDF']
 const SECTOR_COLORS  = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#C8EFE3', '#DDF0E9', '#E8F7F1']
 
-const EMPTY_FORM = { stockName: '', stockCode: '', sector: 'IT', quantity: '', avgPrice: '' }
+const EMPTY_FORM = { stockName: '', stockCode: '', sector: 'IT' }
 
 export default function StockPage() {
   const [stocks, setStocks]               = useState([])
   const [loading, setLoading]             = useState(true)
   const [form, setForm]                   = useState(EMPTY_FORM)
   const [selectedStock, setSelectedStock] = useState(null)
-  const [editModal, setEditModal]         = useState(null)
-  const [editForm, setEditForm]           = useState({})
   const [isDetailOpen, setIsDetailOpen]   = useState(false)
   const [suggestions, setSuggestions]     = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -138,8 +153,6 @@ export default function StockPage() {
         stockName:  form.stockName.trim(),
         stockCode:  form.stockCode.trim(),
         sector:     form.sector || undefined,
-        quantity:   Number(form.quantity) || 0,
-        avgPrice:   Number(form.avgPrice) || 0,
       })
       setForm(EMPTY_FORM)
       await fetchStocks()
@@ -153,28 +166,6 @@ export default function StockPage() {
   const closeDetail = () => {
     setIsDetailOpen(false)
     setTimeout(() => setSelectedStock(null), 300)
-  }
-
-  /* ── 수정 모달 ── */
-  const openEdit = stock => {
-    setEditModal(stock)
-    setEditForm({
-      quantity: stock.quantity,
-      avgPrice: stock.avgPrice,
-    })
-  }
-
-  const saveEdit = async () => {
-    try {
-      await updateStock(editModal.id, {
-        quantity: Number(editForm.quantity),
-        avgPrice: Number(editForm.avgPrice),
-      })
-      setEditModal(null)
-      await fetchStocks()
-    } catch (err) {
-      alert(err.response?.data?.message ?? '수정에 실패했습니다')
-    }
   }
 
   /* ── 삭제 ── */
@@ -238,20 +229,6 @@ export default function StockPage() {
             >
               {SECTORS.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
             </select>
-            <input
-              className="sp-input qty"
-              type="number"
-              placeholder="보유수량"
-              value={form.quantity}
-              onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-            />
-            <input
-              className="sp-input price"
-              type="number"
-              placeholder="단가"
-              value={form.avgPrice}
-              onChange={e => setForm(f => ({ ...f, avgPrice: e.target.value }))}
-            />
             <button
               className="sp-add-btn"
               onClick={handleAdd}
@@ -310,30 +287,53 @@ export default function StockPage() {
                 <div className="sp-detail-divider" />
                 <div className="sp-detail-items">
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">주당 예상 배당금</span>
-                    <span className="sp-detail-value">{fmt(selectedStock.expectedDividendPerShare ?? 0)}원</span>
+                    <span className="sp-detail-label">
+                      주당 예상 배당금
+                      {selectedStock.expectedDividendPerShare > 0 && selectedStock.dividendCycle && selectedStock.dividendCycle !== 'ANNUAL' && (
+                        <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400, marginLeft: 4 }}>
+                          (1회 평균)
+                        </span>
+                      )}
+                    </span>
+                    {selectedStock.expectedDividendPerShare > 0 ? (
+                      <span className="sp-detail-value">
+                        {fmt(perPaymentDividend(selectedStock.expectedDividendPerShare, selectedStock.dividendCycle))}원
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                   <div className="sp-detail-item">
                     <span className="sp-detail-label">총 예상 배당금</span>
-                    <span className="sp-detail-value">
-                      {fmt((selectedStock.expectedDividendPerShare ?? 0) * selectedStock.quantity)}원
-                    </span>
+                    {selectedStock.expectedDividendPerShare > 0 ? (
+                      <span className="sp-detail-value">
+                        {fmt(selectedStock.expectedDividendPerShare * selectedStock.quantity)}원
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                   <div className="sp-detail-item">
                     <span className="sp-detail-label">배당 지급월</span>
-                    <span className="sp-detail-value neutral">
-                      {selectedStock.paymentMonths?.length > 0
-                        ? selectedStock.paymentMonths.join('월, ') + '월'
-                        : '-'}
-                    </span>
+                    {selectedStock.paymentMonths?.length > 0 ? (
+                      <span className="sp-detail-value neutral">
+                        {selectedStock.paymentMonths
+                          .map(dto => formatPaymentMonth(dto, CURRENT_YEAR))
+                          .join(' ')}
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                   <div className="sp-detail-item">
                     <span className="sp-detail-label">배당수익률</span>
-                    <span className="sp-detail-value">
-                      {selectedStock.previousClose > 0
-                        ? ((selectedStock.expectedDividendPerShare ?? 0) / Number(selectedStock.previousClose) * 100).toFixed(2)
-                        : '0.00'}%
-                    </span>
+                    {selectedStock.expectedDividendPerShare > 0 && selectedStock.previousClose > 0 ? (
+                      <span className="sp-detail-value">
+                        {(selectedStock.expectedDividendPerShare / Number(selectedStock.previousClose) * 100).toFixed(2)}%
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                 </div>
                 <div className="sp-detail-divider" />
@@ -362,7 +362,6 @@ export default function StockPage() {
                 </div>
                 <div className="sp-detail-divider" />
                 <div className="sp-detail-footer">
-                  <button className="sp-detail-btn-edit" onClick={e => { e.stopPropagation(); openEdit(selectedStock) }}>수정</button>
                   <button className="sp-detail-btn-delete" onClick={e => { e.stopPropagation(); handleDelete(selectedStock.id) }}>삭제</button>
                 </div>
               </div>
@@ -383,7 +382,7 @@ export default function StockPage() {
                     <th className="right">단가</th>
                     <th className="right">전일 종가</th>
                     <th className="right">평가손익</th>
-                    <th className="center">수정/삭제</th>
+                    <th className="center">삭제</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,7 +404,6 @@ export default function StockPage() {
                         <td className="right">{s.previousClose ? fmt(s.previousClose) : '-'}</td>
                         <td className={`right ${pnl >= 0 ? 'profit' : 'loss'}`}>{fmtSign(pnl)}</td>
                         <td className="center" onClick={e => e.stopPropagation()}>
-                          <button className="sp-btn-edit" onClick={() => openEdit(s)}>수정</button>
                           <button className="sp-btn-delete" onClick={() => handleDelete(s.id)}>삭제</button>
                         </td>
                       </tr>
@@ -465,34 +463,6 @@ export default function StockPage() {
 
       </div>
 
-      {/* ── 수정 모달 ── */}
-      {editModal && (
-        <div className="sp-modal-overlay" onClick={() => setEditModal(null)}>
-          <div className="sp-modal" onClick={e => e.stopPropagation()}>
-            <p className="sp-modal-title">종목 수정 — {editModal.stockName}</p>
-            <div className="sp-modal-form">
-              {[
-                { key: 'quantity', label: '보유수량' },
-                { key: 'avgPrice', label: '단가 (원)' },
-              ].map(({ key, label }) => (
-                <label key={key} className="sp-modal-label">
-                  {label}
-                  <input
-                    className="sp-modal-input"
-                    type="number"
-                    value={editForm[key]}
-                    onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="sp-modal-actions">
-              <button className="sp-modal-cancel" onClick={() => setEditModal(null)}>취소</button>
-              <button className="sp-modal-save" onClick={saveEdit}>저장</button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   )

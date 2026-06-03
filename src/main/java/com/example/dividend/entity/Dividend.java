@@ -40,6 +40,10 @@ public class Dividend {
     @Column(name = "ex_dividend_date")
     private LocalDate exDividendDate;
 
+    /** 배당기준일 (dvdnBasDt, 올해 기준 변환값) */
+    @Column(name = "base_date")
+    private LocalDate baseDate;
+
     @Column(name = "payment_date")
     private LocalDate paymentDate;
 
@@ -73,6 +77,7 @@ public class Dividend {
     public BigDecimal getExpectedAmount(){ return expectedAmount; }
     public BigDecimal getConfirmedAmount(){ return confirmedAmount; }
     public LocalDate getExDividendDate() { return exDividendDate; }
+    public LocalDate getBaseDate()       { return baseDate; }
     public LocalDate getPaymentDate()    { return paymentDate; }
     public String getStatus()            { return status; }
 
@@ -85,6 +90,7 @@ public class Dividend {
     public void setExpectedAmount(BigDecimal expectedAmount) { this.expectedAmount = expectedAmount; }
     public void setConfirmedAmount(BigDecimal confirmedAmount) { this.confirmedAmount = confirmedAmount; }
     public void setExDividendDate(LocalDate exDividendDate) { this.exDividendDate = exDividendDate; }
+    public void setBaseDate(LocalDate baseDate)           { this.baseDate = baseDate; }
     public void setPaymentDate(LocalDate paymentDate)     { this.paymentDate = paymentDate; }
     public void setStatus(String status)                  { this.status = status; }
 }

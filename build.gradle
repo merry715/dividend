@@ -29,6 +29,8 @@ dependencies {
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'com.github.ben-manes.caffeine:caffeine'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+	// implementation 'com.microsoft.playwright:playwright:1.44.0' // KRX 우회용 - 브라우저 설치 후 활성화
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
