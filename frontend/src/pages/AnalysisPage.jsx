@@ -281,13 +281,13 @@ export default function AnalysisPage() {
       <div className="ap-portfolio-row">
 
         <div className="ap-card ap-port-card">
-          <p className="ap-port-label">총 투자금</p>
+          <p className="ap-port-label">투자원금</p>
           <p className="ap-port-value">{fmt(totalInvestment)}<span className="ap-port-unit">원</span></p>
           <p className="ap-port-sub">{summary?.stockCount ?? 0}개 종목</p>
         </div>
 
         <div className="ap-card ap-port-card">
-          <p className="ap-port-label">평가금액</p>
+          <p className="ap-port-label">평가 금액</p>
           <p className="ap-port-value">{fmt(totalEvalAmount)}<span className="ap-port-unit">원</span></p>
           <p className={`ap-port-sub ${pnl >= 0 ? 'profit' : 'loss'}`}>
             {pnl >= 0 ? '+' : ''}{fmt(pnl)}원 ({pnl >= 0 ? '+' : ''}{pnlPct}%)
@@ -295,12 +295,12 @@ export default function AnalysisPage() {
         </div>
 
         <div className="ap-card ap-port-card">
-          <p className="ap-port-label">배당수익률</p>
+          <p className="ap-port-label">배당 수익률</p>
           <p className="ap-port-value">{dividendYield}<span className="ap-port-unit">%</span></p>
         </div>
 
         <div className="ap-card ap-port-card">
-          <p className="ap-port-label">누적 배당</p>
+          <p className="ap-port-label">총 누적 배당금</p>
           <p className="ap-port-value">{fmt(cumulativeAmount)}<span className="ap-port-unit">원</span></p>
         </div>
 
