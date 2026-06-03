@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './AdminPage.css'
 import {
   Chart as ChartJS,
@@ -7,6 +8,7 @@ import {
   Tooltip, Legend, Filler,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import { doLogout } from '../utils/logout'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler)
 
@@ -23,6 +25,7 @@ async function apiFetch(url) {
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate()
   const [loading, setLoading]                 = useState(true)
   const [totalUsers, setTotalUsers]           = useState(0)
   const [activeUsers, setActiveUsers]         = useState(0)
@@ -107,6 +110,20 @@ export default function AdminPage() {
 
   return (
     <div className="adm-page">
+
+      {/* ── 상단 바 ── */}
+      <div className="adm-topbar">
+        <div className="adm-brand">
+          <span className="adm-brand-text">leafpay</span>
+          <span className="adm-brand-badge">관리자</span>
+        </div>
+        <div className="adm-user-row">
+          <div className="adm-avatar">A</div>
+          <span className="adm-user-label">admin</span>
+          <button className="adm-logout-btn" onClick={() => doLogout(navigate)}>로그아웃</button>
+        </div>
+      </div>
+
       <div className="adm-content">
 
         {/* 요약 카드 3개 */}
