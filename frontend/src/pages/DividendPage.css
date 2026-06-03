@@ -25,7 +25,6 @@
   border-radius: 14px;
   padding: 14px 16px;
   flex-shrink: 0;
-  box-sizing: border-box;
 }
 
 .dp-card-title {
@@ -307,6 +306,7 @@
 .dp-status-badge.confirmed { background: #E1F5EE; color: #1D9E75; }
 .dp-status-badge.partial   { background: #FFF3E0; color: #E67E22; }
 .dp-status-badge.expected  { background: #f0f0f0; color: #999;    }
+.dp-status-badge.expired   { background: #f0f0f0; color: #ccc;    }
 
 /* ── 지급월 태그 ── */
 .dp-month-tags {
@@ -325,90 +325,151 @@
 
 .dp-month-tag.confirmed { background: #E1F5EE; color: #1D9E75; }
 .dp-month-tag.expected  { background: #f0f0f0; color: #aaa;    }
+.dp-month-tag.expired   { background: #f7f7f7; color: #ccc; text-decoration: line-through; }
 
-@media (max-width: 768px) {
-  .dp-page {
-    overflow: visible;
-    height: auto;
-    min-height: 100%;
-  }
+/* 경과 행 전체 흐리게 */
+.dp-stock-table tbody tr.dp-tr-expired td { color: #ccc; }
+.dp-stock-table tbody tr.dp-tr-expired .dp-stock-name { color: #ccc; }
+.dp-stock-table tbody tr.dp-tr-expired:hover { background: transparent; }
 
-  .dp-monthly-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .dp-convert-row {
-    flex-wrap: wrap;
-  }
-
-  .dp-fi-amount {
-    flex: 1 1 100%;
-  }
-
-  .dp-summary-row {
-    flex-wrap: wrap;
-  }
-
-  .dp-card {
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .dp-monthly-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .dp-sum-card {
-    flex: 1 1 calc(50% - 6px);
-    min-width: 130px;
-  }
-}
-
-/* ── 상태 패널 (에러/빈) ── */
-.dp-status {
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  gap: 12px;
-  color: #888;
-}
-.dp-status-msg { font-size: 14px; margin: 0; }
-.dp-status-sub { font-size: 12px; color: #bbb; margin: 0; }
-.dp-retry-btn {
-  height: 36px;
-  padding: 0 18px;
-  background: #1D9E75;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
+/* ── 수정 버튼 ── */
+.dp-edit-btn {
+  height: 28px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid #1D9E75;
+  color: #1D9E75;
+  border-radius: 6px;
   font-family: 'Outfit', sans-serif;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.12s;
 }
-.dp-retry-btn:hover { background: #189068; }
+.dp-edit-btn:hover { background: #1D9E75; color: #fff; }
 
-/* ── 토스트 (LoginPage .lp-toast 미러) ── */
-.dp-toast {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-120px);
-  background: rgba(26, 42, 34, 0.92);
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-family: inherit;
-  max-width: calc(100vw - 48px);
-  text-align: center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-  z-index: 1100;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  pointer-events: none;
+/* ── 사이클 배지 ── */
+.dp-cycle-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #E1F5EE;
+  color: #1D9E75;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.dp-toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── 수정 모달 ── */
+.dp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dp-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: 520px;
+  max-width: 95vw;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dp-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.dp-modal-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.dp-modal-close:hover { color: #555; }
+
+.dp-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dp-modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #ebebeb;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.dp-modal-row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dp-modal-month {
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+}
+
+.dp-modal-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.dp-modal-badge.confirmed { background: #E1F5EE; color: #1D9E75; }
+.dp-modal-badge.expected  { background: #f0f0f0; color: #999;    }
+
+.dp-modal-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dp-confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #777;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dp-confirm-check input[type="checkbox"] {
+  accent-color: #1D9E75;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.dp-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

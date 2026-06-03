@@ -19,3 +19,13 @@ jwt:
 
 dart:
   api-key: ${DART_API_KEY:9a77df24ff2657a980e10641ce1e02cc25182d37}
+
+data-go-kr:
+  api-key: ${DATA_GO_KR_API_KEY:}
+
+krx:
+  api-key: ${KRX_API_KEY:}
+
+dividend:
+  scheduler:
+    enabled: true   # 연간 배당 갱신 스케줄러 on/off

@@ -1,6 +1,6 @@
 package com.example.dividend.service;
 
-import com.example.dividend.client.PythonServerClient;
+import com.example.dividend.client.DartNaverClient;
 import com.example.dividend.dto.PriceResult;
 import com.example.dividend.entity.Stock;
 import com.example.dividend.entity.StockPriceCache;
@@ -24,17 +24,19 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class StockPriceFallbackServiceTest {
 
-    @Mock PythonServerClient        pythonServerClient;
+    @Mock DartNaverClient           dartNaverClient;
     @Mock StockPriceCacheRepository cacheRepository;
 
     @InjectMocks StockPriceFallbackService fallbackService;
+
+    // (주가 소스: 네이버 금융 — DartNaverClient.fetchPrice)
 
     // ── fetchPrice (단일 ticker) ─────────────────────────────────────────────
 
     @Test
     @DisplayName("① yfinance 성공 → source=yfinance, 캐시 upsert")
     void fetchPrice_yfinanceSuccess() {
-        given(pythonServerClient.fetchPrice("005930.KS"))
+        given(dartNaverClient.fetchPrice("005930.KS"))
                 .willReturn(new BigDecimal("71000"));
         given(cacheRepository.findById("005930.KS"))
                 .willReturn(Optional.empty());
@@ -54,7 +56,7 @@ class StockPriceFallbackServiceTest {
     @Test
     @DisplayName("② yfinance 실패, 캐시 있음 → source=cache")
     void fetchPrice_yfinanceFail_cacheHit() {
-        given(pythonServerClient.fetchPrice("005930.KS")).willReturn(null);
+        given(dartNaverClient.fetchPrice("005930.KS")).willReturn(null);
 
         StockPriceCache cached = new StockPriceCache("005930.KS", new BigDecimal("70000"));
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.of(cached));
@@ -69,7 +71,7 @@ class StockPriceFallbackServiceTest {
     @Test
     @DisplayName("③ yfinance 실패, 캐시 없음, avgPrice 있음 → source=avg_purchase")
     void fetchPrice_yfinanceFail_noCache_hasAvg() {
-        given(pythonServerClient.fetchPrice("005930.KS")).willReturn(null);
+        given(dartNaverClient.fetchPrice("005930.KS")).willReturn(null);
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.empty());
 
         PriceResult result = fallbackService.fetchPrice("005930.KS", new BigDecimal("65000"));
@@ -81,7 +83,7 @@ class StockPriceFallbackServiceTest {
     @Test
     @DisplayName("④ yfinance 실패, 캐시 없음, avgPrice 없음 → source=unavailable, price=0")
     void fetchPrice_allFail_unavailable() {
-        given(pythonServerClient.fetchPrice("005930.KS")).willReturn(null);
+        given(dartNaverClient.fetchPrice("005930.KS")).willReturn(null);
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.empty());
 
         PriceResult result = fallbackService.fetchPrice("005930.KS", BigDecimal.ZERO);
@@ -94,7 +96,7 @@ class StockPriceFallbackServiceTest {
     @Test
     @DisplayName("yfinance 0 반환 → 유효하지 않은 값으로 처리, cache로 fallback")
     void fetchPrice_yfinanceReturnsZero_fallbackToCache() {
-        given(pythonServerClient.fetchPrice("005930.KS")).willReturn(BigDecimal.ZERO);
+        given(dartNaverClient.fetchPrice("005930.KS")).willReturn(BigDecimal.ZERO);
 
         StockPriceCache cached = new StockPriceCache("005930.KS", new BigDecimal("70000"));
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.of(cached));
@@ -110,52 +112,52 @@ class StockPriceFallbackServiceTest {
     @DisplayName("KOSPI 종목: .KS 티커로 조회")
     void fetchPriceForStock_kospi_usesKsTicker() {
         Stock stock = buildStock("005930", "KOSPI", new BigDecimal("65000"));
-        given(pythonServerClient.fetchPrice("005930.KS"))
+        given(dartNaverClient.fetchPrice("005930.KS"))
                 .willReturn(new BigDecimal("71000"));
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.empty());
 
         PriceResult result = fallbackService.fetchPriceForStock(stock);
 
         assertThat(result.getSource()).isEqualTo(PriceResult.SOURCE_YFINANCE);
-        verify(pythonServerClient).fetchPrice("005930.KS");
-        verify(pythonServerClient, never()).fetchPrice("005930.KQ");
+        verify(dartNaverClient).fetchPrice("005930.KS");
+        verify(dartNaverClient, never()).fetchPrice("005930.KQ");
     }
 
     @Test
     @DisplayName("KOSDAQ 종목: .KQ 티커로 조회")
     void fetchPriceForStock_kosdaq_usesKqTicker() {
         Stock stock = buildStock("035420", "KOSDAQ", new BigDecimal("80000"));
-        given(pythonServerClient.fetchPrice("035420.KQ"))
+        given(dartNaverClient.fetchPrice("035420.KQ"))
                 .willReturn(new BigDecimal("85000"));
         given(cacheRepository.findById("035420.KQ")).willReturn(Optional.empty());
 
         PriceResult result = fallbackService.fetchPriceForStock(stock);
 
         assertThat(result.getSource()).isEqualTo(PriceResult.SOURCE_YFINANCE);
-        verify(pythonServerClient).fetchPrice("035420.KQ");
-        verify(pythonServerClient, never()).fetchPrice("035420.KS");
+        verify(dartNaverClient).fetchPrice("035420.KQ");
+        verify(dartNaverClient, never()).fetchPrice("035420.KS");
     }
 
     @Test
     @DisplayName("exchange 미설정 종목: .KS 성공 시 .KQ 시도 안 함")
     void fetchPriceForStock_unknownExchange_ksSucceeds() {
         Stock stock = buildStock("005930", null, new BigDecimal("65000"));
-        given(pythonServerClient.fetchPrice("005930.KS"))
+        given(dartNaverClient.fetchPrice("005930.KS"))
                 .willReturn(new BigDecimal("71000"));
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.empty());
 
         PriceResult result = fallbackService.fetchPriceForStock(stock);
 
         assertThat(result.getSource()).isEqualTo(PriceResult.SOURCE_YFINANCE);
-        verify(pythonServerClient, never()).fetchPrice("005930.KQ");
+        verify(dartNaverClient, never()).fetchPrice("005930.KQ");
     }
 
     @Test
     @DisplayName("exchange 미설정: .KS 실패 → .KQ yfinance 성공")
     void fetchPriceForStock_unknownExchange_ksFail_kqSuccess() {
         Stock stock = buildStock("035420", null, new BigDecimal("80000"));
-        given(pythonServerClient.fetchPrice("035420.KS")).willReturn(null);
-        given(pythonServerClient.fetchPrice("035420.KQ"))
+        given(dartNaverClient.fetchPrice("035420.KS")).willReturn(null);
+        given(dartNaverClient.fetchPrice("035420.KQ"))
                 .willReturn(new BigDecimal("85000"));
         given(cacheRepository.findById("035420.KQ")).willReturn(Optional.empty());
 
@@ -169,8 +171,8 @@ class StockPriceFallbackServiceTest {
     @DisplayName("exchange 미설정: yfinance 둘 다 실패, .KS 캐시 사용")
     void fetchPriceForStock_unknownExchange_bothFail_ksCache() {
         Stock stock = buildStock("005930", null, BigDecimal.ZERO);
-        given(pythonServerClient.fetchPrice("005930.KS")).willReturn(null);
-        given(pythonServerClient.fetchPrice("005930.KQ")).willReturn(null);
+        given(dartNaverClient.fetchPrice("005930.KS")).willReturn(null);
+        given(dartNaverClient.fetchPrice("005930.KQ")).willReturn(null);
 
         StockPriceCache cached = new StockPriceCache("005930.KS", new BigDecimal("70000"));
         given(cacheRepository.findById("005930.KS")).willReturn(Optional.of(cached));

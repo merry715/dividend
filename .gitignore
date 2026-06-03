@@ -44,3 +44,5 @@ out/
 .env
 .env.local
 .env.*.local
+*.log
+run-railway.bat

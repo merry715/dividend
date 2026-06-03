@@ -1,8 +1,12 @@
 package com.example.dividend.controller;
 
 import com.example.dividend.dto.ApiResponse;
+import com.example.dividend.dto.request.DividendAutoGenerateRequest;
 import com.example.dividend.dto.request.DividendConfirmRequest;
 import com.example.dividend.dto.request.DividendGenerateRequest;
+import com.example.dividend.dto.request.DividendUpdateRequest;
+import com.example.dividend.dto.response.DividendAutoGenerateResponse;
+import com.example.dividend.dto.response.StockDividendResponse;
 import com.example.dividend.entity.Dividend;
 import com.example.dividend.service.DividendService;
 import jakarta.validation.Valid;
@@ -75,5 +79,46 @@ public class DividendController {
     @GetMapping
     public ApiResponse<List<Dividend>> getAll(@AuthenticationPrincipal Long userId) {
         return ApiResponse.ok(dividendService.getAll(userId));
+    }
+
+    // [NEW-1] 분기/반기 배당 첫 번째 지급일 확정 + 나머지 자동생성
+    @PostMapping("/confirm-with-auto-generate")
+    public ApiResponse<DividendAutoGenerateResponse> confirmWithAutoGenerate(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody DividendAutoGenerateRequest request) {
+        return ApiResponse.ok(
+                dividendService.confirmWithAutoGenerate(userId, request),
+                "배당이 확정 및 자동 생성되었습니다"
+        );
+    }
+
+    // [NEW-2] 개별 배당 row 업데이트
+    @PatchMapping("/{dividendId}")
+    public ApiResponse<Dividend> updateDividend(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long dividendId,
+            @RequestBody DividendUpdateRequest request) {
+        return ApiResponse.ok(
+                dividendService.updateDividend(dividendId, userId, request),
+                "배당이 업데이트되었습니다"
+        );
+    }
+
+    // [NEW-3] 종목별 배당 정보 조회
+    @GetMapping("/by-stock")
+    public ApiResponse<List<StockDividendResponse>> getByStock(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam Optional<Integer> year) {
+        int y = year.orElse(LocalDate.now().getYear());
+        return ApiResponse.ok(dividendService.getByStock(userId, y));
+    }
+
+    // [기존] 확정 전환 드롭다운용 종목 목록
+    @GetMapping("/stocks-for-confirm")
+    public ApiResponse<List<Map<String, Object>>> getStocksForConfirm(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam Optional<Integer> year) {
+        int y = year.orElse(LocalDate.now().getYear());
+        return ApiResponse.ok(dividendService.getStocksForConfirm(userId, y));
     }
 }
