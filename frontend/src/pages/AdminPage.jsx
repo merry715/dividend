@@ -29,6 +29,7 @@ export default function AdminPage() {
   const [loading, setLoading]                 = useState(true)
   const [totalUsers, setTotalUsers]           = useState(0)
   const [activeUsers, setActiveUsers]         = useState(0)
+  const [activeEmails, setActiveEmails]       = useState([])
   const [totalStocks, setTotalStocks]         = useState(0)
   const [monthlyTrend, setMonthlyTrend]       = useState([])
   const [topStocks, setTopStocks]             = useState([])
@@ -46,6 +47,12 @@ export default function AdminPage() {
 
       setTotalUsers(userStats.totalUsers)
       setActiveUsers(activeData.activeUsers)
+      const rawEmails =
+        activeData.emails ??
+        activeData.activeUserEmails ??
+        activeData.users?.map(u => u.email).filter(Boolean) ??
+        []
+      setActiveEmails(rawEmails.slice(0, 5))
       setMonthlyTrend(userStats.monthlyTrend.map(m => ({ month: m.month, users: m.count })))
       setTotalStocks(sectorDist.reduce((s, r) => s + Number(r.count), 0))
       setTopStocks(top10.slice(0, 3).map((s, i) => ({
@@ -94,9 +101,7 @@ export default function AdminPage() {
         border: { display: false },
       },
       y: {
-        grid: { color: '#f4f4f4' },
-        ticks: { font: { family: 'Outfit', size: 10 }, color: '#bbb' },
-        border: { display: false },
+        display: false,
         beginAtZero: true,
       },
     },
@@ -107,6 +112,10 @@ export default function AdminPage() {
       불러오는 중...
     </div>
   )
+
+  const chartYear = monthlyTrend.length > 0
+    ? (() => { const m = String(monthlyTrend[0].month); const match = m.match(/\d{4}/); return match ? match[0] : new Date().getFullYear() })()
+    : new Date().getFullYear()
 
   return (
     <div className="adm-page">
@@ -129,25 +138,31 @@ export default function AdminPage() {
         {/* 요약 카드 3개 */}
         <div className="adm-summary-row">
           <div className="adm-sum-card">
-            <p className="adm-sum-label">전체 가입 회원수</p>
+            <p className="adm-sum-label">전체 가입된 일반 회원 수</p>
             <p className="adm-sum-value">{fmt(totalUsers)}<span className="adm-sum-unit">명</span></p>
-            <p className="adm-sum-sub">누적 회원 합계</p>
           </div>
           <div className="adm-sum-card">
-            <p className="adm-sum-label">최근 30일 활성 사용자</p>
+            <p className="adm-sum-label">최근 방문한 일반 회원 수</p>
             <p className="adm-sum-value">{fmt(activeUsers)}<span className="adm-sum-unit">명</span></p>
-            <p className="adm-sum-sub">최근 30일 이내 로그인</p>
+            <p className="adm-sum-sub">최근 30일 이내</p>
+            {activeEmails.length > 0 && (
+              <ul className="adm-active-emails">
+                {activeEmails.map(email => (
+                  <li key={email}>{email}</li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="adm-sum-card">
-            <p className="adm-sum-label">전체 등록 종목 수</p>
+            <p className="adm-sum-label">전체 보유 종목 수</p>
             <p className="adm-sum-value">{fmt(totalStocks)}<span className="adm-sum-unit">종목</span></p>
-            <p className="adm-sum-sub">현재 활성 종목</p>
+            <p className="adm-sum-sub">중복 종목일 시, 1개로 취급</p>
           </div>
         </div>
 
         {/* 월별 가입자 추이 */}
         <div className="adm-card adm-chart-card">
-          <p className="adm-card-title">전체 가입 회원 수 월별 추이 (2025)</p>
+          <p className="adm-card-title">전체 가입 일반 회원 수 월별 추이 ({chartYear})</p>
           <div className="adm-chart-wrap">
             <Line data={lineData} options={lineOptions} />
           </div>
