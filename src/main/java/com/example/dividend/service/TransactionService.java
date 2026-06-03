@@ -3,8 +3,10 @@ package com.example.dividend.service;
 import com.example.dividend.dto.request.TransactionCreateRequest;
 import com.example.dividend.dto.request.TransactionUpdateRequest;
 import com.example.dividend.entity.Transaction;
+import com.example.dividend.repository.DividendRepository;
 import com.example.dividend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -12,27 +14,44 @@ import java.util.*;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final DividendRepository dividendRepository;
 
-    public TransactionService(TransactionRepository transactionRepository) {
+    public TransactionService(TransactionRepository transactionRepository,
+                              DividendRepository dividendRepository) {
         this.transactionRepository = transactionRepository;
+        this.dividendRepository = dividendRepository;
     }
 
-    // 연도·유형 필터 조회 (DB 레벨 쿼리)
-    public List<Transaction> getAll(Integer year, String type) {
+    /**
+     * 거래 변경 후 순보유수량이 0 이하가 된 종목의 EXPECTED 배당 row 정리.
+     * 거래 삭제·전량 매도로 미보유가 되면 고아 EXPECTED 배당이 남는 것을 방지 (read-side 보유 게이트의 보완).
+     * CONFIRMED(실수령 기록일 수 있음)는 절대 삭제하지 않음.
+     */
+    private void cleanupExpectedDividendsIfUnheld(Long userId, Long stockId) {
+        if (userId == null || stockId == null) return;
+        if (transactionRepository.calculateNetQuantity(stockId) <= 0) {
+            dividendRepository.deleteExpectedByUserIdAndStockId(userId, stockId);
+        }
+    }
+
+
+    public List<Transaction> getAll(Long userId, Integer year, String type) {
         if (year != null && type != null) {
-            return transactionRepository.findByYearAndType(year, type.toUpperCase());
+            return transactionRepository.findActiveByUserIdAndYearAndType(userId, year, type.toUpperCase());
         }
         if (year != null) {
-            return transactionRepository.findByYear(year);
+            return transactionRepository.findActiveByUserIdAndYear(userId, year);
         }
         if (type != null) {
-            return transactionRepository.findByType(type.toUpperCase());
+            return transactionRepository.findActiveByUserIdAndType(userId, type.toUpperCase());
         }
-        return transactionRepository.findAll();
+        return transactionRepository.findActiveByUserId(userId);
     }
 
-    public Transaction add(TransactionCreateRequest req) {
+    @Transactional
+    public Transaction add(Long userId, TransactionCreateRequest req) {
         Transaction t = new Transaction();
+        t.setUserId(userId);
         t.setStockId(req.getStockId());
         t.setType(req.getType());
         t.setQuantity(req.getQuantity());
@@ -40,8 +59,13 @@ public class TransactionService {
         t.setDate(req.getDate());
         t.setBrokerFee(req.getBrokerFee());
         t.setTransactionTax(req.getTransactionTax());
-        return transactionRepository.save(t);
+        Transaction saved = transactionRepository.save(t);
+        // 전량 매도 등으로 순보유가 0이 되면 EXPECTED 배당 정리
+        cleanupExpectedDividendsIfUnheld(userId, saved.getStockId());
+        return saved;
     }
+
+    @Transactional
 
     public Transaction update(Long id, TransactionUpdateRequest req) {
         Transaction t = transactionRepository.findById(id)
@@ -54,27 +78,33 @@ public class TransactionService {
         if (req.getBrokerFee()      != null) t.setBrokerFee(req.getBrokerFee());
         if (req.getTransactionTax() != null) t.setTransactionTax(req.getTransactionTax());
 
-        return transactionRepository.save(t);
+        Transaction saved = transactionRepository.save(t);
+        // 수량·유형 수정으로 순보유가 0이 되면 EXPECTED 배당 정리
+        cleanupExpectedDividendsIfUnheld(saved.getUserId(), saved.getStockId());
+        return saved;
     }
 
+    @Transactional
     public void delete(Long id) {
-        if (!transactionRepository.existsById(id)) {
-            throw new NoSuchElementException("거래를 찾을 수 없습니다: " + id);
-        }
+        Transaction t = transactionRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("거래를 찾을 수 없습니다: " + id));
+        Long userId = t.getUserId();
+        Long stockId = t.getStockId();
         transactionRepository.deleteById(id);
+        // 삭제로 순보유가 0이 되면 EXPECTED 배당 정리 (CONFIRMED 보존)
+        cleanupExpectedDividendsIfUnheld(userId, stockId);
     }
 
-    public List<Transaction> getByStockId(Long stockId) {
-        return transactionRepository.findByStockId(stockId);
+    public List<Transaction> getByStockId(Long userId, Long stockId) {
+        return transactionRepository.findByUserIdAndStockId(userId, stockId);
     }
 
-    // 특정 종목의 보유 수량 및 평균 단가 계산
     // 평균 단가 = (매수금액 합계 + 위탁수수료 합계) / 총 매수 수량
-    public Map<String, Object> getStockHolding(Long stockId) {
-        List<Transaction> all = transactionRepository.findByStockId(stockId);
+    public Map<String, Object> getStockHolding(Long userId, Long stockId) {
+        List<Transaction> all = transactionRepository.findByUserIdAndStockId(userId, stockId);
 
         int totalBuyQty = 0, totalSellQty = 0;
-        long totalBuyCost = 0;  // 매수 원가 (수수료 포함)
+        long totalBuyCost = 0;
         long totalBrokerFee = 0, totalTransactionTax = 0;
 
         for (Transaction t : all) {
@@ -104,12 +134,11 @@ public class TransactionService {
         return result;
     }
 
-    // 전체 종목의 보유 현황 집계
-    public List<Map<String, Object>> getAllHoldings() {
-        Map<Long, int[]> qtyMap = new LinkedHashMap<>();   // stockId -> [buyQty, sellQty]
-        Map<Long, Long>  costMap = new LinkedHashMap<>();  // stockId -> buyCost (수수료 포함)
+    public List<Map<String, Object>> getAllHoldings(Long userId) {
+        Map<Long, int[]> qtyMap = new LinkedHashMap<>();
+        Map<Long, Long>  costMap = new LinkedHashMap<>();
 
-        for (Transaction t : transactionRepository.findAll()) {
+        for (Transaction t : transactionRepository.findActiveByUserId(userId)) {
             Long stockId = t.getStockId();
             qtyMap.putIfAbsent(stockId, new int[]{0, 0});
             costMap.putIfAbsent(stockId, 0L);
@@ -141,9 +170,8 @@ public class TransactionService {
         return result;
     }
 
-    // 전체 거래 요약 (수수료·세금 포함)
-    public Map<String, Object> getSummary() {
-        List<Transaction> all = transactionRepository.findAll();
+    public Map<String, Object> getSummary(Long userId) {
+        List<Transaction> all = transactionRepository.findActiveByUserId(userId);
 
         long totalBuyAmount = 0, totalSellAmount = 0, totalBrokerFee = 0, totalTransactionTax = 0;
         for (Transaction t : all) {
@@ -165,8 +193,8 @@ public class TransactionService {
         return summary;
     }
 
-    public Map<String, Object> getMonthlyChart(int year) {
-        List<Transaction> filtered = transactionRepository.findByYear(year);
+    public Map<String, Object> getMonthlyChart(Long userId, int year) {
+        List<Transaction> filtered = transactionRepository.findActiveByUserIdAndYear(userId, year);
 
         Map<Integer, long[]> monthMap = new TreeMap<>();
         for (int i = 1; i <= 12; i++) monthMap.put(i, new long[]{0L, 0L});

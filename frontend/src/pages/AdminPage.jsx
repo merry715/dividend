@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './AdminPage.css'
 import {
@@ -7,56 +8,65 @@ import {
   Tooltip, Legend, Filler,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import { doLogout } from '../utils/logout'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler)
 
 const fmt = n => Number(n).toLocaleString('ko-KR')
 
-const MONTHLY_SIGNUPS = [
-  { month: '1월',  users: 12  },
-  { month: '2월',  users: 19  },
-  { month: '3월',  users: 31  },
-  { month: '4월',  users: 28  },
-  { month: '5월',  users: 45  },
-  { month: '6월',  users: 52  },
-  { month: '7월',  users: 61  },
-  { month: '8월',  users: 58  },
-  { month: '9월',  users: 74  },
-  { month: '10월', users: 83  },
-  { month: '11월', users: 91  },
-  { month: '12월', users: 108 },
-]
-
-const TOP_STOCKS = [
-  { rank: 1, name: '삼성전자', count: 1284, sector: '반도체' },
-  { rank: 2, name: 'AAPL',    count: 976,  sector: '기술'   },
-  { rank: 3, name: 'NVDA',    count: 841,  sector: '반도체' },
-]
-
-const SECTOR_DIVIDENDS = [
-  { sector: '반도체', avgDividend: 82400,  stocks: 3 },
-  { sector: '기술',   avgDividend: 64200,  stocks: 5 },
-  { sector: '금융',   avgDividend: 112000, stocks: 2 },
-  { sector: '자동차', avgDividend: 38600,  stocks: 2 },
-  { sector: '기타',   avgDividend: 29800,  stocks: 4 },
-]
+async function apiFetch(url) {
+  const token = localStorage.getItem('token') || localStorage.getItem('accessToken')
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+  if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`)
+  const json = await res.json()
+  return json?.data ?? json
+}
 
 export default function AdminPage() {
-  const navigate  = useNavigate()
-  const totalUsers  = MONTHLY_SIGNUPS.reduce((s, m) => s + m.users, 0)
-  const activeUsers = MONTHLY_SIGNUPS.slice(-2).reduce((s, m) => s + m.users, 0)
-  const totalStocks = 5
+  const navigate = useNavigate()
+  const [loading, setLoading]                 = useState(true)
+  const [totalUsers, setTotalUsers]           = useState(0)
+  const [activeUsers, setActiveUsers]         = useState(0)
+  const [totalStocks, setTotalStocks]         = useState(0)
+  const [monthlyTrend, setMonthlyTrend]       = useState([])
+  const [topStocks, setTopStocks]             = useState([])
+  const [sectorDividends, setSectorDividends] = useState([])
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth')
-    navigate('/login', { replace: true })
-  }
+  useEffect(() => {
+    async function load() {
+      const [userStats, activeData, top10, sectorDist, dividendAvg] = await Promise.all([
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/users'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/users/active'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/stocks/top10'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/sectors'),
+        apiFetch('https://dividend-production.up.railway.app/api/v1/admin/stats/dividends/average'),
+      ])
+
+      setTotalUsers(userStats.totalUsers)
+      setActiveUsers(activeData.activeUsers)
+      setMonthlyTrend(userStats.monthlyTrend.map(m => ({ month: m.month, users: m.count })))
+      setTotalStocks(sectorDist.reduce((s, r) => s + Number(r.count), 0))
+      setTopStocks(top10.slice(0, 3).map((s, i) => ({
+        rank: i + 1, name: s.stockName, count: s.count, sector: s.sector ?? '-'
+      })))
+      setSectorDividends(dividendAvg.bySector.map(s => ({
+        sector: s.label,
+        avgDividend: s.avgAmount,
+        stocks: sectorDist.find(d => d.sector === s.sector)?.count ?? 0,
+      })))
+
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const lineData = {
-    labels: MONTHLY_SIGNUPS.map(m => m.month),
+    labels: monthlyTrend.map(m => m.month),
     datasets: [{
       label: '가입자 수',
-      data: MONTHLY_SIGNUPS.map(m => m.users),
+      data: monthlyTrend.map(m => m.users),
       borderColor: '#1D9E75',
       backgroundColor: 'rgba(29, 158, 117, 0.08)',
       borderWidth: 2.5,
@@ -92,6 +102,12 @@ export default function AdminPage() {
     },
   }
 
+  if (loading) return (
+    <div className="adm-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      불러오는 중...
+    </div>
+  )
+
   return (
     <div className="adm-page">
 
@@ -104,13 +120,13 @@ export default function AdminPage() {
         <div className="adm-user-row">
           <div className="adm-avatar">A</div>
           <span className="adm-user-label">admin</span>
-          <button className="adm-logout-btn" onClick={handleLogout}>로그아웃</button>
+          <button className="adm-logout-btn" onClick={() => doLogout(navigate)}>로그아웃</button>
         </div>
       </div>
 
       <div className="adm-content">
 
-        {/* ── 요약 카드 3개 ── */}
+        {/* 요약 카드 3개 */}
         <div className="adm-summary-row">
           <div className="adm-sum-card">
             <p className="adm-sum-label">전체 가입 회원수</p>
@@ -120,7 +136,7 @@ export default function AdminPage() {
           <div className="adm-sum-card">
             <p className="adm-sum-label">최근 30일 활성 사용자</p>
             <p className="adm-sum-value">{fmt(activeUsers)}<span className="adm-sum-unit">명</span></p>
-            <p className="adm-sum-sub">최근 2개월 신규 가입</p>
+            <p className="adm-sum-sub">최근 30일 이내 로그인</p>
           </div>
           <div className="adm-sum-card">
             <p className="adm-sum-label">전체 등록 종목 수</p>
@@ -129,7 +145,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ── 월별 가입자 추이 라인 차트 ── */}
+        {/* 월별 가입자 추이 */}
         <div className="adm-card adm-chart-card">
           <p className="adm-card-title">전체 가입 회원 수 월별 추이 (2025)</p>
           <div className="adm-chart-wrap">
@@ -137,23 +153,19 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* ── 하단: 테이블 2개 ── */}
+        {/* 하단 테이블 2개 */}
         <div className="adm-bottom-row">
 
-          {/* 많이 등록된 종목 Top 3 */}
           <div className="adm-card adm-table-card">
             <p className="adm-card-title">많이 등록된 종목 Top 3</p>
             <table className="adm-table">
               <thead>
                 <tr>
-                  <th>순위</th>
-                  <th>종목명</th>
-                  <th>섹터</th>
-                  <th className="right">등록 수</th>
+                  <th>순위</th><th>종목명</th><th>섹터</th><th className="right">등록 수</th>
                 </tr>
               </thead>
               <tbody>
-                {TOP_STOCKS.map(s => (
+                {topStocks.map(s => (
                   <tr key={s.rank}>
                     <td><span className={`adm-rank adm-rank-${s.rank}`}>{s.rank}</span></td>
                     <td className="adm-stock-name">{s.name}</td>
@@ -165,19 +177,16 @@ export default function AdminPage() {
             </table>
           </div>
 
-          {/* 섹터별 평균 배당금 */}
           <div className="adm-card adm-table-card">
             <p className="adm-card-title">섹터별 평균 배당금</p>
             <table className="adm-table">
               <thead>
                 <tr>
-                  <th>섹터</th>
-                  <th className="right">평균 배당금</th>
-                  <th className="right">종목 수</th>
+                  <th>섹터</th><th className="right">평균 배당금</th><th className="right">종목 수</th>
                 </tr>
               </thead>
               <tbody>
-                {SECTOR_DIVIDENDS.map(s => (
+                {sectorDividends.map(s => (
                   <tr key={s.sector}>
                     <td className="adm-sector-name">{s.sector}</td>
                     <td className="right adm-dividend">{fmt(s.avgDividend)}원</td>

@@ -54,6 +54,7 @@ public interface DividendRepository extends JpaRepository<Dividend, Long> {
         @Param("userId") Long userId,
         @Param("stockId") Long stockId);
 
+
     // 스케줄 업데이트 시 전체 삭제 (CONFIRMED 포함)
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("""

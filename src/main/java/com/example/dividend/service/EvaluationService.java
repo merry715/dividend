@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class EvaluationService {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final StockRepository stockRepository;
+    private final HoldingService  holdingService;
 
     public EvaluationResponse getEvaluation(Long stockId, Long userId) {
         Stock stock = stockRepository.findByIdWithUser(stockId)
@@ -30,11 +33,13 @@ public class EvaluationService {
         if (!stock.getUser().getId().equals(userId)) {
             throw new AccessForbiddenException("해당 종목에 접근할 권한이 없습니다");
         }
-        return buildEvaluation(stock);
+        HoldingService.HoldingInfo h = holdingService.getHolding(stockId, userId);
+        return buildEvaluation(stock, h.netQuantity(), h.avgPrice());
     }
 
     public EvaluationSummaryResponse getSummary(Long userId) {
         List<Stock> stocks = stockRepository.findByUser_Id(userId);
+        Map<Long, HoldingService.HoldingInfo> holdingMap = holdingService.getHoldingMap(userId);
 
         BigDecimal totalInvestment  = BigDecimal.ZERO;
         BigDecimal totalEvaluation  = BigDecimal.ZERO;
@@ -43,17 +48,25 @@ public class EvaluationService {
         for (Stock stock : stocks) {
             if (!hasPreviousClose(stock)) continue;
 
-            BigDecimal qty        = BigDecimal.valueOf(stock.getQuantity());
-            BigDecimal investment = stock.getAvgPrice().multiply(qty);
+            HoldingService.HoldingInfo h = holdingMap.getOrDefault(
+                    stock.getId(), HoldingService.HoldingInfo.ZERO);
+            BigDecimal qty        = BigDecimal.valueOf(Math.max(h.netQuantity(), 0));
+            BigDecimal investment = h.avgPrice().multiply(qty);
             BigDecimal evaluation = stock.getPreviousClose().multiply(qty);
 
-            totalInvestment  = totalInvestment.add(investment);
-            totalEvaluation  = totalEvaluation.add(evaluation);
+            totalInvestment = totalInvestment.add(investment);
+            totalEvaluation = totalEvaluation.add(evaluation);
             priceAvailable++;
         }
 
         BigDecimal totalGain       = totalEvaluation.subtract(totalInvestment);
         BigDecimal totalReturnRate = calcReturnRate(totalGain, totalInvestment);
+
+        // source별 종목 수 집계
+        Map<String, Long> priceSourceCounts = stocks.stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getPriceSource() != null ? s.getPriceSource() : "unavailable",
+                        Collectors.counting()));
 
         return EvaluationSummaryResponse.builder()
                 .totalStocks(stocks.size())
@@ -62,12 +75,13 @@ public class EvaluationService {
                 .totalEvaluation(totalEvaluation)
                 .totalGain(totalGain)
                 .totalReturnRate(totalReturnRate)
+                .priceSourceCounts(priceSourceCounts)
                 .build();
     }
 
     // ── 내부 유틸 ───────────────────────────────────────────────────────────────
 
-    private EvaluationResponse buildEvaluation(Stock stock) {
+    private EvaluationResponse buildEvaluation(Stock stock, int netQty, BigDecimal avgPx) {
         boolean hasPrice = hasPreviousClose(stock);
 
         BigDecimal evalAmount  = null;
@@ -75,8 +89,8 @@ public class EvaluationService {
         BigDecimal returnRate  = null;
 
         if (hasPrice) {
-            BigDecimal qty        = BigDecimal.valueOf(stock.getQuantity());
-            BigDecimal investment = stock.getAvgPrice().multiply(qty);
+            BigDecimal qty        = BigDecimal.valueOf(Math.max(netQty, 0));
+            BigDecimal investment = avgPx.multiply(qty);
             evalAmount = stock.getPreviousClose().multiply(qty);
             evalGain   = evalAmount.subtract(investment);
             returnRate = calcReturnRate(evalGain, investment);
@@ -87,12 +101,13 @@ public class EvaluationService {
                 .stockCode(stock.getStockCode())
                 .stockName(stock.getStockName())
                 .currency(stock.getCurrency())
-                .quantity(stock.getQuantity())
-                .avgPrice(stock.getAvgPrice())
+                .quantity(netQty)
+                .avgPrice(avgPx)
                 .previousClose(hasPrice ? stock.getPreviousClose() : null)
                 .evaluationAmount(evalAmount)
                 .evaluationGain(evalGain)
                 .returnRate(returnRate)
+                .priceSource(stock.getPriceSource())
                 .build();
     }
 

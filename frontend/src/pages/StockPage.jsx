@@ -1,169 +1,281 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import './StockPage.css'
 import logo from '../assets/logo.png'
+import { getStocks, createStock, deleteStock, searchStocks, updateStockSector } from '../api/stocks'
 
-const fmt = (n) => Number(n).toLocaleString('ko-KR')
-const fmtSign = (n) => (n >= 0 ? '+' : '') + fmt(n)
+const fmt = (n) => Number(n || 0).toLocaleString('ko-KR')
 
-const STOCK_CODE_MAP = {
-  '삼성전자': '005930', 'SK하이닉스': '000660', '현대차': '005380',
-  '카카오': '035720',   '네이버': '035420',     'LG전자': '066570',
-  'AAPL': 'AAPL',       'MSFT': 'MSFT',         'NVDA': 'NVDA',
-  'GOOGL': 'GOOGL',     'TSLA': 'TSLA',
+const CYCLE_COUNT = { MONTHLY: 12, QUARTERLY: 4, SEMI_ANNUAL: 2, ANNUAL: 1 }
+const CURRENT_YEAR = new Date().getFullYear()
+
+function formatPaymentMonth(dto, currentYear) {
+  if (dto.year === currentYear) return `${dto.month}월`
+  return `${dto.year}.${dto.month}월`
 }
 
-const SECTORS = ['반도체', '기술', '자동차', '금융', '바이오', '소비재', '에너지', '기타']
-const SUMMARY_COLORS  = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#2DB589', '#C8EFDF']
-const SECTOR_COLORS   = ['#1D9E75', '#5DCAA5', '#9FE1CB', '#C8EFE3', '#DDF0E9', '#E8F7F1']
-const TOTAL_SAVINGS   = 15_200_000
+function perPaymentDividend(annualPerShare, dividendCycle) {
+  const count = CYCLE_COUNT[dividendCycle] ?? 1
+  return Math.round(annualPerShare / count)
+}
 
-const INITIAL_STOCKS = [
-  { id: 1, name: '삼성전자', code: '005930', sector: '반도체', type: '매수', quantity: 50,  avgPrice: 68000,  currentPrice: 72500, dividendPerShare: 1444, dividendDate: '2026-04-10' },
-  { id: 2, name: 'AAPL',    code: 'AAPL',    sector: '기술',   type: '매수', quantity: 10,  avgPrice: 178000, currentPrice: 185000, dividendPerShare: 1065, dividendDate: '2026-02-15' },
-  { id: 3, name: 'SK하이닉스', code: '000660', sector: '반도체', type: '매도', quantity: 20, avgPrice: 132000, currentPrice: 119000, dividendPerShare: 1200, dividendDate: '2026-04-10' },
-  { id: 4, name: '현대차',  code: '005380',  sector: '자동차', type: '매수', quantity: 15,  avgPrice: 195000, currentPrice: 212000, dividendPerShare: 8000, dividendDate: '2026-12-20' },
+const SECTORS = [
+  { code: 'IT',                     label: 'IT' },
+  { code: 'FINANCIALS',             label: '금융' },
+  { code: 'HEALTHCARE',             label: '헬스케어' },
+  { code: 'ENERGY',                 label: '에너지' },
+  { code: 'MATERIALS',              label: '소재' },
+  { code: 'INDUSTRIALS',            label: '산업재' },
+  { code: 'CONSUMER_DISCRETIONARY', label: '경기소비재' },
+  { code: 'CONSUMER_STAPLES',       label: '필수소비재' },
+  { code: 'COMMUNICATION',          label: '커뮤니케이션' },
+  { code: 'UTILITIES',              label: '유틸리티' },
+  { code: 'REAL_ESTATE',            label: '부동산' },
+]
+const SECTOR_COLORS = [
+  '#0A4D35', // 다크 포레스트
+  '#1D9E75', // 브랜드 그린
+  '#1B8074', // 다크 틸
+  '#27AE60', // 에메랄드
+  '#40916C', // 세이지
+  '#2ECC71', // 브라이트 그린
+  '#52B788', // 씨폼
+  '#1B9981', // 틸 그린
+  '#74C69D', // 연한 그린
+  '#95D5B2', // 페일 민트
+  '#C8EFE3', // 아이보리 그린
 ]
 
+const EMPTY_FORM = { stockName: '', stockCode: '', sector: 'IT' }
+const EMPTY_EDIT = { open: false, stock: null, sector: 'IT' }
+
 export default function StockPage() {
-  const [stocks, setStocks] = useState(INITIAL_STOCKS)
-  const [form, setForm] = useState({ name: '', code: '', sector: SECTORS[0], quantity: '', avgPrice: '' })
-  const [filter, setFilter] = useState('전체')
+  const [stocks, setStocks]               = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [form, setForm]                   = useState(EMPTY_FORM)
   const [selectedStock, setSelectedStock] = useState(null)
-  const [editModal, setEditModal] = useState(null)
-  const [editForm, setEditForm] = useState({})
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isDetailOpen, setIsDetailOpen]   = useState(false)
+  const [suggestions, setSuggestions]     = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [editModal, setEditModal]         = useState(EMPTY_EDIT)
+  const searchTimer   = useRef(null)
+  const suggestionRef = useRef(null)
 
-  /* ── 투자 합계 ── */
-  const totalInvested = useMemo(() =>
-    stocks.reduce((s, st) => s + st.quantity * st.avgPrice, 0), [stocks])
+  const fetchStocks = async () => {
+    setLoading(true)
+    try {
+      const res = await getStocks()
+      const list = res.data.data ?? []
+      setStocks(list)
+      setSelectedStock(prev => prev ? (list.find(s => s.id === prev.id) ?? null) : null)
+    } catch {
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const summaryItems = useMemo(() =>
-    [...stocks]
-      .sort((a, b) => b.quantity * b.avgPrice - a.quantity * a.avgPrice)
-      .map(s => ({
-        id: s.id, name: s.name,
-        pct: totalInvested > 0 ? Math.round(s.quantity * s.avgPrice / totalInvested * 100) : 0,
-      }))
-  , [stocks, totalInvested])
+  useEffect(() => { fetchStocks() }, [])
+
+  /* ── 자동완성 ── */
+  const handleStockNameChange = useCallback((value) => {
+    setForm(f => ({ ...f, stockName: value }))
+    clearTimeout(searchTimer.current)
+    if (!value.trim()) { setSuggestions([]); setShowSuggestions(false); return }
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await searchStocks(value.trim())
+        const list = res.data?.data ?? []
+        setSuggestions(list)
+        setShowSuggestions(list.length > 0)
+      } catch {
+        setSuggestions([]); setShowSuggestions(false)
+      }
+    }, 300)
+  }, [])
+
+  const selectSuggestion = (item) => {
+    setForm(f => ({ ...f, stockName: item.stockName, stockCode: item.stockCode }))
+    setSuggestions([]); setShowSuggestions(false)
+  }
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(e.target))
+        setShowSuggestions(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   /* ── 섹터별 투자비중 ── */
+  const totalInvested = useMemo(() =>
+    stocks.reduce((s, st) => s + st.quantity * Number(st.avgPrice || 0), 0),
+    [stocks]
+  )
+
   const sectorWeights = useMemo(() => {
     const map = {}
     stocks.forEach(s => {
-      const val = s.quantity * s.avgPrice
-      map[s.sector] = (map[s.sector] || 0) + val
+      const label = s.sectorLabel ?? s.sectorCode ?? '기타'
+      const val = s.quantity * Number(s.avgPrice || 0)
+      map[label] = (map[label] || 0) + val
     })
     return Object.entries(map)
-      .map(([sector, val]) => ({ sector, val, pct: totalInvested > 0 ? Math.round(val / totalInvested * 100) : 0 }))
+      .map(([sector, val]) => ({
+        sector, val,
+        pct: totalInvested > 0 ? Math.round(val / totalInvested * 100) : 0,
+      }))
       .sort((a, b) => b.val - a.val)
   }, [stocks, totalInvested])
 
-  /* ── 종목별 수익/손실 ── */
-  const stockPnl = useMemo(() => {
-    const list = stocks.map(s => {
-      const pnl    = (s.currentPrice - s.avgPrice) * s.quantity
-      const pnlPct = s.avgPrice > 0 ? ((s.currentPrice - s.avgPrice) / s.avgPrice * 100).toFixed(1) : '0.0'
-      return { ...s, pnl, pnlPct }
-    }).sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))
-    const maxAbs = Math.max(...list.map(s => Math.abs(s.pnl)), 1)
-    return list.map(s => ({ ...s, barWidth: Math.abs(s.pnl) / maxAbs * 100 }))
-  }, [stocks])
-
   /* ── 종목 추가 ── */
-  const handleNameChange = e => {
-    const name = e.target.value
-    setForm(f => ({ ...f, name, code: STOCK_CODE_MAP[name] ?? '' }))
+  const handleAdd = async () => {
+    if (!form.stockName.trim() || !form.stockCode.trim()) return
+    try {
+      await createStock({
+        stockName: form.stockName.trim(),
+        stockCode: form.stockCode.trim(),
+        sector:    form.sector || undefined,
+      })
+      setForm(EMPTY_FORM)
+      await fetchStocks()
+    } catch (err) {
+      alert(err.response?.data?.message ?? '종목 추가에 실패했습니다')
+    }
   }
-
-  const handleAdd = () => {
-    if (!form.name.trim()) return
-    setStocks(prev => [...prev, {
-      id: Date.now(),
-      name: form.name.trim(),
-      code: form.code || form.name.trim().toUpperCase(),
-      sector: form.sector,
-      type: '매수',
-      quantity:    Number(form.quantity)  || 0,
-      avgPrice:    Number(form.avgPrice)  || 0,
-      currentPrice: 0,
-      dividendPerShare: 0,
-      dividendDate: '-',
-    }])
-    setForm({ name: '', code: '', sector: SECTORS[0], quantity: '', avgPrice: '' })
-  }
-
-  /* ── 필터 ── */
-  const filteredStocks = filter === '전체' ? stocks : stocks.filter(s => s.type === filter)
 
   /* ── 상세 패널 ── */
   const handleRowClick = stock => { setSelectedStock(stock); setIsDetailOpen(true) }
-  const closeDetail = () => { setIsDetailOpen(false); setTimeout(() => setSelectedStock(null), 300) }
-
-  /* ── 수정 모달 ── */
-  const openEdit = stock => { setEditModal(stock); setEditForm({ quantity: stock.quantity, avgPrice: stock.avgPrice, currentPrice: stock.currentPrice }) }
-  const saveEdit = () => {
-    const updated = { quantity: Number(editForm.quantity), avgPrice: Number(editForm.avgPrice), currentPrice: Number(editForm.currentPrice) }
-    setStocks(prev => prev.map(s => s.id === editModal.id ? { ...s, ...updated } : s))
-    if (selectedStock?.id === editModal.id) setSelectedStock(prev => ({ ...prev, ...updated }))
-    setEditModal(null)
+  const closeDetail = () => {
+    setIsDetailOpen(false)
+    setTimeout(() => setSelectedStock(null), 300)
   }
 
   /* ── 삭제 ── */
-  const handleDelete = id => {
+  const handleDelete = async id => {
     if (!window.confirm('해당 종목을 삭제하시겠습니까?')) return
-    setStocks(prev => prev.filter(s => s.id !== id))
-    if (selectedStock?.id === id) closeDetail()
+    try {
+      await deleteStock(id)
+      if (selectedStock?.id === id) closeDetail()
+      await fetchStocks()
+    } catch (err) {
+      alert(err.response?.data?.message ?? '삭제에 실패했습니다')
+    }
   }
+
+  /* ── 섹터 수정 ── */
+  const openEdit = (e, stock) => {
+    e.stopPropagation()
+    setEditModal({ open: true, stock, sector: stock.sectorCode ?? 'IT' })
+  }
+
+  const handleEditSave = async () => {
+    try {
+      await updateStockSector(editModal.stock.id, editModal.sector)
+      setEditModal(EMPTY_EDIT)
+      await fetchStocks()
+    } catch (err) {
+      alert(err.response?.data?.message ?? '수정에 실패했습니다')
+    }
+  }
+
+  const sectorLeftCount = Math.max(1, Math.floor(sectorWeights.length / 2))
 
   return (
     <div className="sp-page">
 
       {/* ── 헤더 ── */}
       <div className="sp-header">
-        <h1 className="sp-title">종목관리</h1>
+        <h1 className="sp-title">종목 관리</h1>
         <p className="sp-subtitle">종목을 추가하고 관리하세요</p>
       </div>
 
-      {/* ── 상단: 폼 + 투자 합계 ── */}
+      {/* ── 상단: 폼 + 섹터 비중 ── */}
       <div className="sp-top-row">
 
         <div className="sp-card sp-form-card">
           <p className="sp-card-title">종목 추가</p>
-          <div className="sp-form-row">
-            <input className="sp-input name" placeholder="종목명" value={form.name} onChange={handleNameChange} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
-            <input className="sp-input code" placeholder="종목코드 자동" value={form.code} readOnly />
-            <select className="sp-select" value={form.sector} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}>
-              {SECTORS.map(s => <option key={s}>{s}</option>)}
-            </select>
-            <input className="sp-input qty" type="number" placeholder="보유수량" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
-            <input className="sp-input price" type="number" placeholder="평균단가" value={form.avgPrice} onChange={e => setForm(f => ({ ...f, avgPrice: e.target.value }))} />
-            <button className="sp-add-btn" onClick={handleAdd} disabled={!form.name.trim()}>추가하기</button>
+          <div className="sp-form-rows">
+            <div className="sp-form-row-top">
+              <div className="sp-autocomplete-wrap" ref={suggestionRef}>
+                <input
+                  className="sp-input name"
+                  placeholder="종목명 검색"
+                  value={form.stockName}
+                  onChange={e => handleStockNameChange(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                  autoComplete="off"
+                />
+                {showSuggestions && (
+                  <ul className="sp-suggestions">
+                    {suggestions.map(item => (
+                      <li key={item.stockCode} className="sp-suggestion-item"
+                          onMouseDown={() => selectSuggestion(item)}>
+                        <span className="sp-sug-name">{item.stockName}</span>
+                        <span className="sp-sug-code">{item.stockCode}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <input
+                className="sp-input code"
+                placeholder="종목코드"
+                value={form.stockCode}
+                readOnly
+              />
+              <button
+                className="sp-add-btn"
+                onClick={handleAdd}
+                disabled={!form.stockName.trim() || !form.stockCode.trim()}
+              >
+                추가하기
+              </button>
+            </div>
+            <div className="sp-form-row-bottom">
+              <select
+                className="sp-select"
+                value={form.sector}
+                onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}
+              >
+                {SECTORS.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="sp-card sp-summary-card">
-          <p className="sp-card-title">투자 합계</p>
-          <div className="sp-summary-list">
-            {summaryItems.map((item, i) => (
-              <div key={item.id} className="sp-summary-item">
-                <span className="sp-summary-dot" style={{ background: SUMMARY_COLORS[i % SUMMARY_COLORS.length] }} />
-                <span className="sp-summary-name">{item.name}</span>
-                <div className="sp-pct-bar">
-                  <div className="sp-pct-fill" style={{ width: `${item.pct}%`, background: SUMMARY_COLORS[i % SUMMARY_COLORS.length] }} />
+        <div className="sp-card sp-sector-card">
+          <p className="sp-card-title">섹터별 투자비중</p>
+          <div className="sp-sector-list">
+            {sectorWeights.length === 0 ? (
+              <span style={{ color: '#bbb', fontSize: 13 }}>데이터 없음</span>
+            ) : (
+              <>
+                <div className="sp-sector-col">
+                  {sectorWeights.slice(0, sectorLeftCount).map((sw, i) => (
+                    <div key={sw.sector} className="sp-sector-item">
+                      <span className="sp-sector-dot" style={{ background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
+                      <span className="sp-sector-name">{sw.sector}</span>
+                      <div className="sp-sector-bar-bg">
+                        <div className="sp-sector-bar-fill" style={{ width: `${sw.pct}%`, background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
+                      </div>
+                      <span className="sp-sector-pct">{sw.pct}%</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="sp-summary-pct">{item.pct}%</span>
-              </div>
-            ))}
-          </div>
-          <div className="sp-summary-totals">
-            <div className="sp-summary-total-item">
-              <span className="sp-summary-total-label">총 투자금</span>
-              <span className="sp-summary-total-value">{fmt(totalInvested)}원</span>
-            </div>
-            <div className="sp-summary-total-item" style={{ textAlign: 'right' }}>
-              <span className="sp-summary-total-label">총 저축금</span>
-              <span className="sp-summary-total-value">{fmt(TOTAL_SAVINGS)}원</span>
-            </div>
+                <div className="sp-sector-col">
+                  {sectorWeights.slice(sectorLeftCount).map((sw, i) => (
+                    <div key={sw.sector} className="sp-sector-item">
+                      <span className="sp-sector-dot" style={{ background: SECTOR_COLORS[(sectorLeftCount + i) % SECTOR_COLORS.length] }} />
+                      <span className="sp-sector-name">{sw.sector}</span>
+                      <div className="sp-sector-bar-bg">
+                        <div className="sp-sector-bar-fill" style={{ width: `${sw.pct}%`, background: SECTOR_COLORS[(sectorLeftCount + i) % SECTOR_COLORS.length] }} />
+                      </div>
+                      <span className="sp-sector-pct">{sw.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -179,8 +291,8 @@ export default function StockPage() {
                 <div className="sp-detail-top">
                   <img src={logo} alt="" className="sp-detail-logo" />
                   <div className="sp-detail-name-group">
-                    <span className="sp-detail-name">{selectedStock.name}</span>
-                    <span className="sp-detail-code">{selectedStock.code}</span>
+                    <span className="sp-detail-name">{selectedStock.stockName}</span>
+                    <span className="sp-detail-code">{selectedStock.stockCode}</span>
                   </div>
                 </div>
                 <button className="sp-detail-close" onClick={closeDetail}>✕</button>
@@ -189,22 +301,53 @@ export default function StockPage() {
                 <div className="sp-detail-divider" />
                 <div className="sp-detail-items">
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">주당 예상 배당금</span>
-                    <span className="sp-detail-value">{fmt(selectedStock.dividendPerShare)}원</span>
+                    <span className="sp-detail-label">
+                      주당 예상 배당금
+                      {selectedStock.expectedDividendPerShare > 0 && selectedStock.dividendCycle && selectedStock.dividendCycle !== 'ANNUAL' && (
+                        <span style={{ fontSize: 11, color: '#aaa', fontWeight: 400, marginLeft: 4 }}>
+                          (1회 평균)
+                        </span>
+                      )}
+                    </span>
+                    {selectedStock.expectedDividendPerShare > 0 ? (
+                      <span className="sp-detail-value">
+                        {fmt(perPaymentDividend(selectedStock.expectedDividendPerShare, selectedStock.dividendCycle))}원
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                   <div className="sp-detail-item">
                     <span className="sp-detail-label">총 예상 배당금</span>
-                    <span className="sp-detail-value">{fmt(selectedStock.dividendPerShare * selectedStock.quantity)}원</span>
+                    {selectedStock.expectedDividendPerShare > 0 ? (
+                      <span className="sp-detail-value">
+                        {fmt(selectedStock.expectedDividendPerShare * selectedStock.quantity)}원
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">배당 지급일</span>
-                    <span className="sp-detail-value neutral">{selectedStock.dividendDate}</span>
+                    <span className="sp-detail-label">배당 지급월</span>
+                    {selectedStock.paymentMonths?.length > 0 ? (
+                      <span className="sp-detail-value neutral">
+                        {selectedStock.paymentMonths
+                          .map(dto => formatPaymentMonth(dto, CURRENT_YEAR))
+                          .join(' ')}
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                   <div className="sp-detail-item">
                     <span className="sp-detail-label">배당수익률</span>
-                    <span className="sp-detail-value">
-                      {selectedStock.currentPrice > 0 ? (selectedStock.dividendPerShare / selectedStock.currentPrice * 100).toFixed(2) : '0.00'}%
-                    </span>
+                    {selectedStock.expectedDividendPerShare > 0 && selectedStock.previousClose > 0 ? (
+                      <span className="sp-detail-value">
+                        {(selectedStock.expectedDividendPerShare / Number(selectedStock.previousClose) * 100).toFixed(2)}%
+                      </span>
+                    ) : (
+                      <span className="sp-detail-value sp-detail-na">해당사항 없음</span>
+                    )}
                   </div>
                 </div>
                 <div className="sp-detail-divider" />
@@ -215,26 +358,24 @@ export default function StockPage() {
                     <span className="sp-detail-value neutral">{fmt(selectedStock.quantity)}주</span>
                   </div>
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">평균단가</span>
+                    <span className="sp-detail-label">단가</span>
                     <span className="sp-detail-value neutral">{fmt(selectedStock.avgPrice)}원</span>
                   </div>
                   <div className="sp-detail-item">
-                    <span className="sp-detail-label">현재가</span>
-                    <span className="sp-detail-value neutral">{fmt(selectedStock.currentPrice)}원</span>
+                    <span className="sp-detail-label">전일 종가</span>
+                    <span className="sp-detail-value neutral">
+                      {selectedStock.previousClose ? fmt(selectedStock.previousClose) + '원' : '-'}
+                    </span>
                   </div>
-                  {(() => {
-                    const pnl = (selectedStock.currentPrice - selectedStock.avgPrice) * selectedStock.quantity
-                    return (
-                      <div className="sp-detail-item">
-                        <span className="sp-detail-label">평가손익</span>
-                        <span className={`sp-detail-value ${pnl >= 0 ? 'profit' : 'loss'}`}>{fmtSign(pnl)}원</span>
-                      </div>
-                    )
-                  })()}
+                  <div className="sp-detail-item">
+                    <span className="sp-detail-label">평가손익</span>
+                    <span className={`sp-detail-value ${Number(selectedStock.evaluationProfit ?? 0) >= 0 ? 'profit' : 'loss'}`}>
+                      {Number(selectedStock.evaluationProfit ?? 0) >= 0 ? '+' : ''}{fmt(Number(selectedStock.evaluationProfit ?? 0))}원
+                    </span>
+                  </div>
                 </div>
                 <div className="sp-detail-divider" />
                 <div className="sp-detail-footer">
-                  <button className="sp-detail-btn-edit" onClick={e => { e.stopPropagation(); openEdit(selectedStock) }}>수정</button>
                   <button className="sp-detail-btn-delete" onClick={e => { e.stopPropagation(); handleDelete(selectedStock.id) }}>삭제</button>
                 </div>
               </div>
@@ -243,116 +384,67 @@ export default function StockPage() {
         </div>
 
         <div className="sp-table-section">
-          <div className="sp-filters">
-            {['전체', '매수', '매도'].map(f => (
-              <button key={f} className={`sp-filter-tab${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>{f}</button>
-            ))}
-          </div>
           <div className="sp-table-wrap">
-            <table className="sp-table">
-              <thead>
-                <tr>
-                  <th>종목명</th><th>종목코드</th><th>섹터</th>
-                  <th className="center">구분</th>
-                  <th className="right">보유수량</th><th className="right">평균단가</th>
-                  <th className="right">현재가</th><th className="right">평가손익</th>
-                  <th className="center">수정/삭제</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStocks.length === 0 ? (
-                  <tr><td colSpan={9} className="sp-empty">보유 종목이 없습니다.</td></tr>
-                ) : filteredStocks.map(s => {
-                  const pnl = (s.currentPrice - s.avgPrice) * s.quantity
-                  return (
-                    <tr key={s.id} className={selectedStock?.id === s.id ? 'selected' : ''} onClick={() => handleRowClick(s)}>
-                      <td className="stock-name">{s.name}</td>
-                      <td>{s.code}</td><td>{s.sector}</td>
-                      <td className="center">
-                        <span className={`sp-type-badge ${s.type === '매수' ? 'buy' : 'sell'}`}>{s.type}</span>
-                      </td>
-                      <td className="right">{fmt(s.quantity)}</td>
-                      <td className="right">{fmt(s.avgPrice)}</td>
-                      <td className="right">{fmt(s.currentPrice)}</td>
-                      <td className={`right ${pnl >= 0 ? 'profit' : 'loss'}`}>{fmtSign(pnl)}</td>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#bbb' }}>로딩 중...</div>
+            ) : (
+              <table className="sp-table">
+                <thead>
+                  <tr>
+                    <th>종목명</th>
+                    <th>종목코드</th>
+                    <th>섹터</th>
+                    <th>보유수량</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stocks.length === 0 ? (
+                    <tr><td colSpan={5} className="sp-empty">보유 종목이 없습니다.</td></tr>
+                  ) : stocks.map(s => (
+                    <tr
+                      key={s.id}
+                      className={selectedStock?.id === s.id ? 'selected' : ''}
+                      onClick={() => handleRowClick(s)}
+                    >
+                      <td className="stock-name">{s.stockName}</td>
+                      <td>{s.stockCode}</td>
+                      <td>{s.sectorLabel ?? s.sectorCode ?? '-'}</td>
+                      <td>{fmt(s.quantity)}</td>
                       <td className="center" onClick={e => e.stopPropagation()}>
-                        <button className="sp-btn-edit" onClick={() => openEdit(s)}>수정</button>
+                        <button className="sp-btn-edit" onClick={e => openEdit(e, s)}>수정</button>
                         <button className="sp-btn-delete" onClick={() => handleDelete(s.id)}>삭제</button>
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
       </div>
 
-      {/* ── 하단: 섹터별 투자비중 + 종목별 수익/손실 ── */}
-      <div className="sp-bottom-row">
-
-        {/* 섹터별 투자비중 */}
-        <div className="sp-card sp-sector-card">
-          <p className="sp-card-title">섹터별 투자비중</p>
-          <div className="sp-sector-list">
-            {sectorWeights.map((sw, i) => (
-              <div key={sw.sector} className="sp-sector-item">
-                <span className="sp-sector-dot" style={{ background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
-                <span className="sp-sector-name">{sw.sector}</span>
-                <div className="sp-sector-bar-bg">
-                  <div className="sp-sector-bar-fill" style={{ width: `${sw.pct}%`, background: SECTOR_COLORS[i % SECTOR_COLORS.length] }} />
-                </div>
-                <span className="sp-sector-pct">{sw.pct}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 종목별 수익/손실 */}
-        <div className="sp-card sp-pnl-card">
-          <p className="sp-card-title">종목별 수익/손실</p>
-          <div className="sp-pnl-list">
-            {stockPnl.map(s => (
-              <div key={s.id} className="sp-pnl-item">
-                <span className="sp-pnl-name">{s.name}</span>
-                <div className="sp-pnl-bar-bg">
-                  <div
-                    className={`sp-pnl-bar-fill ${s.pnl >= 0 ? 'profit' : 'loss'}`}
-                    style={{ width: `${s.barWidth}%` }}
-                  />
-                </div>
-                <span className={`sp-pnl-amount ${s.pnl >= 0 ? 'profit' : 'loss'}`}>{fmtSign(s.pnl)}</span>
-                <span className={`sp-pnl-pct ${s.pnl >= 0 ? 'profit' : 'loss'}`}>
-                  {s.pnl >= 0 ? '+' : ''}{s.pnlPct}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── 수정 모달 ── */}
-      {editModal && (
-        <div className="sp-modal-overlay" onClick={() => setEditModal(null)}>
+      {/* ── 섹터 수정 모달 ── */}
+      {editModal.open && (
+        <div className="sp-modal-overlay" onClick={() => setEditModal(EMPTY_EDIT)}>
           <div className="sp-modal" onClick={e => e.stopPropagation()}>
-            <p className="sp-modal-title">종목 수정 — {editModal.name}</p>
+            <p className="sp-modal-title">섹터 수정</p>
             <div className="sp-modal-form">
-              {[
-                { key: 'quantity',     label: '보유수량' },
-                { key: 'avgPrice',     label: '평균단가 (원)' },
-                { key: 'currentPrice', label: '현재가 (원)' },
-              ].map(({ key, label }) => (
-                <label key={key} className="sp-modal-label">
-                  {label}
-                  <input className="sp-modal-input" type="number" value={editForm[key]} onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))} />
-                </label>
-              ))}
+              <label className="sp-modal-label">
+                섹터
+                <select
+                  className="sp-modal-select"
+                  value={editModal.sector}
+                  onChange={e => setEditModal(m => ({ ...m, sector: e.target.value }))}
+                >
+                  {SECTORS.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+                </select>
+              </label>
             </div>
             <div className="sp-modal-actions">
-              <button className="sp-modal-cancel" onClick={() => setEditModal(null)}>취소</button>
-              <button className="sp-modal-save" onClick={saveEdit}>저장</button>
+              <button className="sp-modal-cancel" onClick={() => setEditModal(EMPTY_EDIT)}>취소</button>
+              <button className="sp-modal-save" onClick={handleEditSave}>저장</button>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -29,8 +29,16 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       try {
-        const { data } = await axios.post('/api/v1/auth/refresh', { refreshToken });
+        const { data } = await axios.post(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
+        if (!data.success || !data.data?.accessToken) {
+          clearAuth();
+          window.location.href = '/';
+          return Promise.reject(error);
+        }
         localStorage.setItem('accessToken', data.data.accessToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+        }
         original.headers.Authorization = `Bearer ${data.data.accessToken}`;
         return api(original);
       } catch {
@@ -39,6 +47,8 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
     }
+    error.uiMessage = error.response?.data?.message
+      || '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
     return Promise.reject(error);
   }
 );

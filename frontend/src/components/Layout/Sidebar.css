@@ -306,3 +306,50 @@
   color: #777;
   line-height: 1.5;
 }
+
+/* ── 모바일 백드롭 ── */
+.sidebar__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 299;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 300;
+    width: 240px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* collapsed 클래스가 모바일에서 width를 덮어쓰지 않도록 */
+  .sidebar.collapsed {
+    width: 240px;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.collapsed.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar__toggle {
+    display: none;
+  }
+
+  .sidebar__tips-popover {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: 80px;
+  }
+}

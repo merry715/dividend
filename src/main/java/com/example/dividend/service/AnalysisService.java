@@ -24,9 +24,10 @@ public class AnalysisService {
 
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
-    private final StockRepository stockRepository;
+    private final StockRepository    stockRepository;
     private final DividendRepository dividendRepository;
-    private final GoalRepository goalRepository;
+    private final GoalRepository     goalRepository;
+    private final HoldingService     holdingService;
 
     public GoalAchievementResponse getGoalAchievement(Long userId) {
         int currentYear = LocalDate.now().getYear();
@@ -60,9 +61,14 @@ public class AnalysisService {
 
     public AnalysisSummaryResponse getSummary(Long userId) {
         List<Stock> stocks = stockRepository.findByUser_Id(userId);
+        Map<Long, HoldingService.HoldingInfo> holdingMap = holdingService.getHoldingMap(userId);
 
         BigDecimal totalInvestment = stocks.stream()
-                .map(s -> s.getAvgPrice().multiply(BigDecimal.valueOf(s.getQuantity())))
+                .map(s -> {
+                    HoldingService.HoldingInfo h = holdingMap.getOrDefault(
+                            s.getId(), HoldingService.HoldingInfo.ZERO);
+                    return h.avgPrice().multiply(BigDecimal.valueOf(Math.max(h.netQuantity(), 0)));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         int currentYear = LocalDate.now().getYear();
@@ -81,14 +87,13 @@ public class AnalysisService {
             return List.of();
         }
 
-        List<Long> stockIds = stocks.stream().map(Stock::getId).toList();
-        List<Dividend> dividends = dividendRepository.findByStockIdIn(stockIds);
+        List<Dividend> dividends = dividendRepository.findByUserId(userId);
 
         Map<Integer, Integer> byYear = new TreeMap<>(Comparator.reverseOrder());
         for (Dividend d : dividends) {
             int amount = "CONFIRMED".equals(d.getStatus())
-                    ? d.getConfirmedDividend()
-                    : d.getExpectedDividend();
+                    ? (d.getConfirmedAmount() != null ? d.getConfirmedAmount().intValue() : 0)
+                    : (d.getExpectedAmount()  != null ? d.getExpectedAmount().intValue()  : 0);
             byYear.merge(d.getYear(), amount, Integer::sum);
         }
 
@@ -102,14 +107,22 @@ public class AnalysisService {
 
     public List<StockWeightResponse> getStockWeights(Long userId) {
         List<Stock> stocks = stockRepository.findByUser_Id(userId);
+        Map<Long, HoldingService.HoldingInfo> holdingMap = holdingService.getHoldingMap(userId);
 
         BigDecimal totalInvestment = stocks.stream()
-                .map(s -> s.getAvgPrice().multiply(BigDecimal.valueOf(s.getQuantity())))
+                .map(s -> {
+                    HoldingService.HoldingInfo h = holdingMap.getOrDefault(
+                            s.getId(), HoldingService.HoldingInfo.ZERO);
+                    return h.avgPrice().multiply(BigDecimal.valueOf(Math.max(h.netQuantity(), 0)));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return stocks.stream()
                 .map(s -> {
-                    BigDecimal investment = s.getAvgPrice().multiply(BigDecimal.valueOf(s.getQuantity()));
+                    HoldingService.HoldingInfo h = holdingMap.getOrDefault(
+                            s.getId(), HoldingService.HoldingInfo.ZERO);
+                    BigDecimal investment = h.avgPrice().multiply(
+                            BigDecimal.valueOf(Math.max(h.netQuantity(), 0)));
                     BigDecimal weight = totalInvestment.compareTo(BigDecimal.ZERO) > 0
                             ? investment.divide(totalInvestment, 6, RoundingMode.HALF_UP)
                                     .multiply(HUNDRED).setScale(2, RoundingMode.HALF_UP)
@@ -128,14 +141,22 @@ public class AnalysisService {
 
     public List<SectorWeightResponse> getSectorWeights(Long userId) {
         List<Stock> stocks = stockRepository.findByUser_Id(userId);
+        Map<Long, HoldingService.HoldingInfo> holdingMap = holdingService.getHoldingMap(userId);
 
         BigDecimal totalInvestment = stocks.stream()
-                .map(s -> s.getAvgPrice().multiply(BigDecimal.valueOf(s.getQuantity())))
+                .map(s -> {
+                    HoldingService.HoldingInfo h = holdingMap.getOrDefault(
+                            s.getId(), HoldingService.HoldingInfo.ZERO);
+                    return h.avgPrice().multiply(BigDecimal.valueOf(Math.max(h.netQuantity(), 0)));
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<StockSector, BigDecimal> bySector = new LinkedHashMap<>();
         for (Stock s : stocks) {
-            BigDecimal investment = s.getAvgPrice().multiply(BigDecimal.valueOf(s.getQuantity()));
+            HoldingService.HoldingInfo h = holdingMap.getOrDefault(
+                    s.getId(), HoldingService.HoldingInfo.ZERO);
+            BigDecimal investment = h.avgPrice().multiply(
+                    BigDecimal.valueOf(Math.max(h.netQuantity(), 0)));
             StockSector sector = s.getSector();
             bySector.merge(sector, investment, BigDecimal::add);
         }
@@ -166,8 +187,8 @@ public class AnalysisService {
         return dividendRepository.findByStockIdIn(stockIds).stream()
                 .filter(d -> d.getYear() == year)
                 .mapToInt(d -> "CONFIRMED".equals(d.getStatus())
-                        ? d.getConfirmedDividend()
-                        : d.getExpectedDividend())
+                        ? (d.getConfirmedAmount() != null ? d.getConfirmedAmount().intValue() : 0)
+                        : (d.getExpectedAmount()  != null ? d.getExpectedAmount().intValue()  : 0))
                 .sum();
     }
 }

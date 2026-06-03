@@ -2,12 +2,13 @@ package com.example.dividend.controller;
 
 import com.example.dividend.entity.Goal;
 import com.example.dividend.repository.GoalRepository;
-import com.example.dividend.repository.TransactionRepository;
 import com.example.dividend.service.DashboardService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,32 +16,30 @@ import java.util.Map;
 @RequestMapping("/api/v1/dashboard")
 public class DashboardController {
 
-    private final TransactionRepository transactionRepository;
     private final DashboardService dashboardService;
     private final GoalRepository goalRepository;
 
-    public DashboardController(TransactionRepository transactionRepository,
-                               DashboardService dashboardService,
+    public DashboardController(DashboardService dashboardService,
                                GoalRepository goalRepository) {
-        this.transactionRepository = transactionRepository;
         this.dashboardService = dashboardService;
         this.goalRepository = goalRepository;
     }
 
     @GetMapping
-    public Map<String, Object> dashboard() {
-        int totalInvestment = transactionRepository.findAll().stream()
-                .mapToInt(t -> t.getQuantity() * t.getPrice())
-                .sum();
+    public Map<String, Object> dashboard(@AuthenticationPrincipal Long userId) {
+        var holdings = dashboardService.getHoldings(userId);
 
-        var holdings = dashboardService.getHoldings();
+        // totalInvestment: 해당 사용자의 순 투자금 (Transaction 집계 기반, SELL 차감)
+        long totalInvestment = holdings.stream()
+                .mapToLong(h -> Math.max(h.getTotalInvestment(), 0L))
+                .sum();
 
         int totalDividend = holdings.stream()
                 .mapToInt(h -> h.getExpectedDividend())
                 .sum();
 
-        int targetDividend = goalRepository.findAll().stream()
-                .reduce((first, second) -> second)
+        int currentYear = LocalDate.now().getYear();
+        int targetDividend = goalRepository.findByUserIdAndYear(userId, currentYear)
                 .map(Goal::getTargetDividend)
                 .orElse(0);
 
@@ -55,7 +54,7 @@ public class DashboardController {
         response.put("totalDividend", totalDividend);
         response.put("targetDividend", targetDividend);
         response.put("achievementRate", String.format("%.1f", achievementRate));
-        response.put("monthlyDividends", dashboardService.getMonthlyDividends());
+        response.put("monthlyDividends", dashboardService.getMonthlyDividends(userId));
 
         return response;
     }

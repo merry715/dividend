@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Getter
 @Builder
@@ -26,4 +27,10 @@ public class EvaluationSummaryResponse {
 
     /** 총 수익률(%), 소수점 2자리. 투자 원금 0이면 null */
     private BigDecimal totalReturnRate;
+
+    /**
+     * 종가 데이터 출처별 종목 수.
+     * 예: { "yfinance": 3, "cache": 1, "avg_purchase": 1, "unavailable": 2 }
+     */
+    private Map<String, Long> priceSourceCounts;
 }

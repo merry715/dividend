@@ -81,14 +81,14 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getMe(String email) {
-        User user = userRepository.findByEmail(email)
+    public UserResponse getMe(Long userId) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
         return new UserResponse(user.getId(), user.getEmail(), user.getName(), user.getRole());
     }
 
     private TokenResponse issueTokens(User user) {
-        String accessToken = jwtUtil.generateToken(user.getEmail());
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
         RefreshToken rt = new RefreshToken();
