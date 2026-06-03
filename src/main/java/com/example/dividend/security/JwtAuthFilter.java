@@ -35,11 +35,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if (token != null && jwtUtil.isTokenValid(token)) {
             String email = jwtUtil.extractUsername(token);
-            // email로 User 조회 → userId(Long)를 principal로 저장
+            String role = jwtUtil.extractRole(token);
             userRepository.findByEmail(email).ifPresent(user -> {
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
-                                user.getId(), null, List.of(new SimpleGrantedAuthority(user.getRole())));
+                                user.getId(), null, List.of(new SimpleGrantedAuthority(role)));
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             });
