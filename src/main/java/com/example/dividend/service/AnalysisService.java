@@ -1,10 +1,8 @@
 package com.example.dividend.service;
 
 import com.example.dividend.dto.response.*;
-import com.example.dividend.entity.Dividend;
 import com.example.dividend.entity.Stock;
 import com.example.dividend.entity.StockSector;
-import com.example.dividend.repository.DividendRepository;
 import com.example.dividend.repository.GoalRepository;
 import com.example.dividend.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,6 @@ public class AnalysisService {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final StockRepository    stockRepository;
-    private final DividendRepository dividendRepository;
     private final GoalRepository     goalRepository;
     private final HoldingService     holdingService;
     private final DividendService    dividendService;
@@ -83,25 +80,10 @@ public class AnalysisService {
     }
 
     public List<AnnualDividendResponse> getAnnualDividends(Long userId) {
-        List<Stock> stocks = stockRepository.findByUser_Id(userId);
-        if (stocks.isEmpty()) {
-            return List.of();
-        }
-
-        List<Dividend> dividends = dividendRepository.findByUserId(userId);
-
-        Map<Integer, Integer> byYear = new TreeMap<>(Comparator.reverseOrder());
-        for (Dividend d : dividends) {
-            int amount = "CONFIRMED".equals(d.getStatus())
-                    ? (d.getConfirmedAmount() != null ? d.getConfirmedAmount().intValue() : 0)
-                    : (d.getExpectedAmount()  != null ? d.getExpectedAmount().intValue()  : 0);
-            byYear.merge(d.getYear(), amount, Integer::sum);
-        }
-
-        return byYear.entrySet().stream()
-                .map(e -> AnnualDividendResponse.builder()
-                        .year(e.getKey())
-                        .totalDividend(e.getValue())
+        return dividendService.getYearly(userId).stream()
+                .map(m -> AnnualDividendResponse.builder()
+                        .year((Integer) m.get("year"))
+                        .totalDividend(((Number) m.get("expectedAmount")).intValue())
                         .build())
                 .toList();
     }
