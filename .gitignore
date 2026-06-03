@@ -44,6 +44,8 @@ out/
 .env
 .env.local
 .env.*.local
+*.log
+run-railway.bat
 
 ### Node / Frontend ###
 frontend/node_modules/

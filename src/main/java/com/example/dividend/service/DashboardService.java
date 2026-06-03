@@ -27,25 +27,26 @@ public class DashboardService {
         this.stockRepository = stockRepository;
     }
 
-    public List<HoldingDto> getHoldings() {
+    public List<HoldingDto> getHoldings(Long userId) {
         Map<Long, Integer> quantityMap = new HashMap<>();
-        Map<Long, Integer> investmentMap = new HashMap<>();
+        Map<Long, Long> investmentMap = new HashMap<>();
 
-        for (Transaction t : transactionRepository.findAll()) {
+        for (Transaction t : transactionRepository.findActiveByUserId(userId)) {
             Long stockId = t.getStockId();
-            int amount = t.getQuantity() * t.getPrice();
+            long amount = (long) t.getQuantity() * t.getPrice();
 
             if ("BUY".equals(t.getType())) {
                 quantityMap.merge(stockId, t.getQuantity(), Integer::sum);
-                investmentMap.merge(stockId, amount, Integer::sum);
+                investmentMap.merge(stockId, amount, Long::sum);
             } else {
                 quantityMap.merge(stockId, -t.getQuantity(), Integer::sum);
-                investmentMap.merge(stockId, -amount, Integer::sum);
+                investmentMap.merge(stockId, -amount, Long::sum);
             }
         }
 
+        int currentYear = java.time.LocalDate.now().getYear();
         Map<Long, Integer> dividendMap = new HashMap<>();
-        for (Dividend d : dividendRepository.findAll()) {
+        for (Dividend d : dividendRepository.findByUserIdAndYear(userId, currentYear)) {
             int amt = d.getExpectedAmount() != null ? d.getExpectedAmount().intValue() : 0;
             dividendMap.merge(d.getStockId(), amt, Integer::sum);
         }
@@ -54,9 +55,9 @@ public class DashboardService {
         for (Map.Entry<Long, Integer> entry : quantityMap.entrySet()) {
             Long stockId = entry.getKey();
             int quantity = entry.getValue();
-            int totalInvestment = investmentMap.getOrDefault(stockId, 0);
+            long totalInvestment = investmentMap.getOrDefault(stockId, 0L);
             int expectedDividend = dividendMap.getOrDefault(stockId, 0);
-            int averagePrice = quantity > 0 ? totalInvestment / quantity : 0;
+            long averagePrice = quantity > 0 ? totalInvestment / quantity : 0L;
 
             String stockName = stockRepository.findById(stockId)
                     .map(Stock::getStockName)
@@ -68,20 +69,12 @@ public class DashboardService {
         return result;
     }
 
-    public List<MonthlyDividendDto> getMonthlyDividends() {
-        Map<Long, Integer> quantityMap = new HashMap<>();
-        for (Transaction t : transactionRepository.findAll()) {
-            if ("BUY".equals(t.getType())) {
-                quantityMap.merge(t.getStockId(), t.getQuantity(), Integer::sum);
-            } else {
-                quantityMap.merge(t.getStockId(), -t.getQuantity(), Integer::sum);
-            }
-        }
-
+    public List<MonthlyDividendDto> getMonthlyDividends(Long userId) {
+        int year = java.time.LocalDate.now().getYear();
         Map<Integer, Integer> monthlyMap = new TreeMap<>();
         for (int i = 1; i <= 12; i++) monthlyMap.put(i, 0);
 
-        for (Dividend d : dividendRepository.findAll()) {
+        for (Dividend d : dividendRepository.findByUserIdAndYear(userId, year)) {
             int amt = d.getExpectedAmount() != null ? d.getExpectedAmount().intValue() : 0;
             monthlyMap.merge(d.getMonth(), amt, Integer::sum);
         }

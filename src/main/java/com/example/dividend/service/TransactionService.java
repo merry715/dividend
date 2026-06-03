@@ -19,15 +19,15 @@ public class TransactionService {
 
     public List<Transaction> getAll(Long userId, Integer year, String type) {
         if (year != null && type != null) {
-            return transactionRepository.findByUserIdAndYearAndType(userId, year, type.toUpperCase());
+            return transactionRepository.findActiveByUserIdAndYearAndType(userId, year, type.toUpperCase());
         }
         if (year != null) {
-            return transactionRepository.findByUserIdAndYear(userId, year);
+            return transactionRepository.findActiveByUserIdAndYear(userId, year);
         }
         if (type != null) {
-            return transactionRepository.findByUserIdAndType(userId, type.toUpperCase());
+            return transactionRepository.findActiveByUserIdAndType(userId, type.toUpperCase());
         }
-        return transactionRepository.findByUserId(userId);
+        return transactionRepository.findActiveByUserId(userId);
     }
 
     public Transaction add(Long userId, TransactionCreateRequest req) {
@@ -107,7 +107,7 @@ public class TransactionService {
         Map<Long, int[]> qtyMap = new LinkedHashMap<>();
         Map<Long, Long>  costMap = new LinkedHashMap<>();
 
-        for (Transaction t : transactionRepository.findByUserId(userId)) {
+        for (Transaction t : transactionRepository.findActiveByUserId(userId)) {
             Long stockId = t.getStockId();
             qtyMap.putIfAbsent(stockId, new int[]{0, 0});
             costMap.putIfAbsent(stockId, 0L);
@@ -140,7 +140,7 @@ public class TransactionService {
     }
 
     public Map<String, Object> getSummary(Long userId) {
-        List<Transaction> all = transactionRepository.findByUserId(userId);
+        List<Transaction> all = transactionRepository.findActiveByUserId(userId);
 
         long totalBuyAmount = 0, totalSellAmount = 0, totalBrokerFee = 0, totalTransactionTax = 0;
         for (Transaction t : all) {
@@ -163,7 +163,7 @@ public class TransactionService {
     }
 
     public Map<String, Object> getMonthlyChart(Long userId, int year) {
-        List<Transaction> filtered = transactionRepository.findByUserIdAndYear(userId, year);
+        List<Transaction> filtered = transactionRepository.findActiveByUserIdAndYear(userId, year);
 
         Map<Integer, long[]> monthMap = new TreeMap<>();
         for (int i = 1; i <= 12; i++) monthMap.put(i, new long[]{0L, 0L});

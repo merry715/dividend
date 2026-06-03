@@ -21,9 +21,11 @@ public class SectorService {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     private final StockRepository stockRepository;
+    private final HoldingService  holdingService;
 
     public SectorAnalysisResponse getSectorAnalysis(Long userId) {
         List<Stock> stocks = stockRepository.findByUser_Id(userId);
+        Map<Long, HoldingService.HoldingInfo> holdingMap = holdingService.getHoldingMap(userId);
 
         // 섹터별 종목 수·평가 금액 집계 (enum 선언 순서 유지)
         Map<StockSector, Integer>    countBySector = new LinkedHashMap<>();
@@ -38,7 +40,8 @@ public class SectorService {
         BigDecimal totalEvaluation     = BigDecimal.ZERO;
 
         for (Stock stock : stocks) {
-            BigDecimal eval = evaluationOf(stock);
+            BigDecimal eval = evaluationOf(stock,
+                    holdingMap.getOrDefault(stock.getId(), HoldingService.HoldingInfo.ZERO));
             totalEvaluation = totalEvaluation.add(eval);
 
             StockSector sector = stock.getSector();
@@ -86,10 +89,10 @@ public class SectorService {
                 .build();
     }
 
-    private BigDecimal evaluationOf(Stock stock) {
+    private BigDecimal evaluationOf(Stock stock, HoldingService.HoldingInfo holding) {
         BigDecimal close = stock.getPreviousClose();
         if (close == null || close.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
-        return close.multiply(BigDecimal.valueOf(stock.getQuantity()));
+        return close.multiply(BigDecimal.valueOf(Math.max(holding.netQuantity(), 0)));
     }
 
     private BigDecimal calcWeight(BigDecimal sectorEval, BigDecimal totalEval) {
