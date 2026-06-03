@@ -75,7 +75,9 @@ public class AnalysisService {
         return AnalysisSummaryResponse.builder()
                 .totalInvestment(totalInvestment)
                 .totalExpectedDividend(totalExpectedDividend)
-                .stockCount(stocks.size())
+                .stockCount((int) stocks.stream()
+                        .filter(s -> holdingMap.getOrDefault(s.getId(), HoldingService.HoldingInfo.ZERO).netQuantity() > 0)
+                        .count())
                 .build();
     }
 
@@ -101,6 +103,7 @@ public class AnalysisService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return stocks.stream()
+                .filter(s -> holdingMap.getOrDefault(s.getId(), HoldingService.HoldingInfo.ZERO).netQuantity() > 0)
                 .map(s -> {
                     HoldingService.HoldingInfo h = holdingMap.getOrDefault(
                             s.getId(), HoldingService.HoldingInfo.ZERO);
@@ -138,8 +141,9 @@ public class AnalysisService {
         for (Stock s : stocks) {
             HoldingService.HoldingInfo h = holdingMap.getOrDefault(
                     s.getId(), HoldingService.HoldingInfo.ZERO);
+            if (h.netQuantity() <= 0) continue;
             BigDecimal investment = h.avgPrice().multiply(
-                    BigDecimal.valueOf(Math.max(h.netQuantity(), 0)));
+                    BigDecimal.valueOf(h.netQuantity()));
             StockSector sector = s.getSector();
             bySector.merge(sector, investment, BigDecimal::add);
         }
