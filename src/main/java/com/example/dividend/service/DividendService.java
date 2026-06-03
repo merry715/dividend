@@ -1,5 +1,6 @@
 package com.example.dividend.service;
 
+import com.example.dividend.client.DataGoKrDividendClient;
 import com.example.dividend.client.DataGoKrDividendInfo;
 import com.example.dividend.dto.request.DividendAutoGenerateRequest;
 import com.example.dividend.dto.request.DividendConfirmRequest;
@@ -35,6 +36,7 @@ public class DividendService {
     private final DividendRepository     dividendRepository;
     private final StockRepository        stockRepository;
     private final TransactionRepository  transactionRepository;
+    private final DataGoKrDividendClient dataGoKrClient;
 
     // ── [1] 예상 배당 생성 (DB 기반 — API 호출 없음) ──────────────────────────
 
@@ -193,6 +195,97 @@ public class DividendService {
         dividendRepository.deleteExpectedByUserIdAndStockIdAndYear(userId, stockId, year);
 
         return createDividendRows(userId, stockId, year, entries, stock, quantity);
+    }
+
+    // ── [2-P] 과거 연도 배당 생성/재계산 (누적·연도별 그래프 전용) ─────────────
+
+    /**
+     * 과거 연도(거래 시작 ~ 작년)의 실제 수령 배당을 계산해 CONFIRMED row로 생성.
+     *
+     * - data.go.kr 전체 이력 1회 조회 (추가 트래픽 없음).
+     * - 각 회차의 배당락일(기준일-1영업일) 시점 보유수량으로 정확히 계산.
+     *   · 배당락일 당일 거래는 미포함 (strict <)
+     *   · 보유 0 회차는 row 미생성
+     * - 지급연도 기준으로 year/paymentDate 일관 설정 → 올해(현재연도) 집계엔 미반영.
+     * - 올해(EXPECTED) 생성 로직과 완전 분리.
+     */
+    @Transactional
+    public List<Dividend> generatePastDividends(Long userId, Long stockId) {
+        Stock stock = stockRepository.findByIdAndUser_Id(stockId, userId).orElse(null);
+        if (stock == null) return List.of();
+
+        List<Transaction> txs = transactionRepository.findByUserIdAndStockId(userId, stockId);
+        if (txs.isEmpty()) return List.of();
+
+        int currentYear = LocalDate.now().getYear();
+
+        List<DataGoKrDividendInfo> records =
+                dataGoKrClient.fetchAllYearsDividendRecords(stock.getStockCode(), stock.getStockName());
+        if (records.isEmpty()) return List.of();
+
+        List<Dividend> created = new ArrayList<>();
+        Set<String> seen = new HashSet<>(); // (year,month) 유니크 제약 방어
+
+        for (DataGoKrDividendInfo rec : records) {
+            LocalDate payDate = rec.getPayDate();
+            if (payDate == null) continue;
+
+            int payYear = payDate.getYear();
+            if (payYear >= currentYear) continue;       // 올해 이상은 과거 아님 (올해 EXPECTED가 담당)
+            if (rec.getAmountPerShare() <= 0) continue;
+
+            // 배당락일 = 기준일-1영업일 (기준일 없으면 지급일-1영업일 근사)
+            LocalDate exDate = rec.getBaseDt() != null
+                    ? KoreanBusinessDay.prevBusinessDay(rec.getBaseDt())
+                    : KoreanBusinessDay.prevBusinessDay(payDate);
+
+            int qty = holdingBefore(txs, exDate);       // 배당락일 시점 보유수량 (당일 제외)
+            if (qty <= 0) continue;                     // 미보유 회차 제외
+
+            int month = payDate.getMonthValue();
+            if (!seen.add(payYear + "-" + month)) continue;
+
+            long amount = (long) rec.getAmountPerShare() * qty;
+            Dividend d = new Dividend();
+            d.setUserId(userId);
+            d.setStockId(stockId);
+            d.setYear(payYear);
+            d.setMonth(month);
+            d.setStatus("CONFIRMED");
+            d.setConfirmedAmount(BigDecimal.valueOf(amount));
+            d.setExpectedAmount(BigDecimal.valueOf(amount));
+            d.setPaymentDate(payDate);
+            d.setBaseDate(rec.getBaseDt());
+            d.setExDividendDate(exDate);
+            created.add(dividendRepository.save(d));
+        }
+
+        if (!created.isEmpty())
+            log.info("과거 배당 생성 [stockCode={}, {}건]", stock.getStockCode(), created.size());
+        return created;
+    }
+
+    /**
+     * 거래 변경 시 과거 배당 재계산. 과거(작년 이하) row 전체 삭제 후 재생성.
+     * 올해 row(EXPECTED 등)는 건드리지 않음.
+     */
+    @Transactional
+    public void recalcPastDividends(Long userId, Long stockId) {
+        int currentYear = LocalDate.now().getYear();
+        dividendRepository.deletePastByUserIdAndStockId(userId, stockId, currentYear);
+        generatePastDividends(userId, stockId);
+    }
+
+    /**
+     * 배당락일 시점 보유수량 = 배당락일 이전(strict <) 거래의 BUY−SELL 합.
+     * 배당락일 당일 거래는 미포함. (txs는 해당 종목 전 거래)
+     */
+    private int holdingBefore(List<Transaction> txs, LocalDate exDate) {
+        if (exDate == null) return 0;
+        return txs.stream()
+                .filter(t -> t.getDate() != null && t.getDate().isBefore(exDate))
+                .mapToInt(t -> "BUY".equals(t.getType()) ? t.getQuantity() : -t.getQuantity())
+                .sum();
     }
 
     // ── [3] 배당 확정 처리 ────────────────────────────────────────────────────

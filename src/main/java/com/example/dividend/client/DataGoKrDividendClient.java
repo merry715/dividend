@@ -90,6 +90,43 @@ public class DataGoKrDividendClient {
         }
     }
 
+    /**
+     * 전체 연도 배당 레코드 반환 (연도 필터 없음). 1회 호출로 전체 이력 수신.
+     * 과거 연도 배당 계산용 — 무배당·지급일 없는 레코드는 제외.
+     */
+    public List<DataGoKrDividendInfo> fetchAllYearsDividendRecords(String stockCode, String companyName) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("DATA_GO_KR_API_KEY 미설정 [stockCode={}]", stockCode);
+            return List.of();
+        }
+        if (companyName == null || companyName.isBlank()) {
+            log.warn("회사명 없음 [stockCode={}]", stockCode);
+            return List.of();
+        }
+        try {
+            String json = callRaw(stockCode, companyName.trim(), 100);
+            if (json == null) return List.of();
+
+            List<JsonNode> allItems = parseItems(json, stockCode, companyName);
+            if (allItems.isEmpty()) return List.of();
+
+            List<DataGoKrDividendInfo> result = new ArrayList<>();
+            for (JsonNode item : allItems) {
+                if ("무배당".equals(item.path("stckDvdnRcdNm").asText(""))) continue;
+                LocalDate payDate  = parseDate(item.path("cashDvdnPayDt").asText(""));
+                LocalDate baseDt   = parseDate(item.path("dvdnBasDt").asText(""));
+                int amountPerShare = parseAmount(item.path("stckGenrDvdnAmt").asText("0"));
+                result.add(new DataGoKrDividendInfo(payDate, amountPerShare, baseDt));
+            }
+            log.info("공공데이터포털 전체 연도 배당 {}건 [stockCode={}]", result.size(), stockCode);
+            return result;
+        } catch (Exception e) {
+            log.warn("공공데이터포털 전체 연도 조회 실패 [stockCode={}, companyName={}]: {}",
+                    stockCode, companyName, e.getMessage());
+            return List.of();
+        }
+    }
+
     /** @deprecated 3인자 메서드 사용 권장 */
     @Deprecated
     public List<DataGoKrDividendInfo> fetchAllDividendRecords(String stockCode, int baseYear) {
