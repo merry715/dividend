@@ -37,11 +37,11 @@ export default function AdminPage() {
   useEffect(() => {
     async function load() {
       const [userStats, activeData, top10, sectorDist, dividendAvg] = await Promise.all([
-        apiFetch('/api/admin/stats/users'),
-        apiFetch('/api/admin/stats/users/active'),
-        apiFetch('/api/admin/stats/stocks/top10'),
-        apiFetch('/api/admin/stats/sectors'),
-        apiFetch('/api/admin/stats/dividends/average'),
+        apiFetch('/api/v1/admin/stats/users'),
+        apiFetch('/api/v1/admin/stats/users/active'),
+        apiFetch('/api/v1/admin/stats/stocks/top10'),
+        apiFetch('/api/v1/admin/stats/sectors'),
+        apiFetch('/api/v1/admin/stats/dividends/average'),
       ])
 
       setTotalUsers(userStats.totalUsers)
