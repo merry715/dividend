@@ -34,6 +34,7 @@ public class TransactionService {
         }
     }
 
+
     public List<Transaction> getAll(Long userId, Integer year, String type) {
         if (year != null && type != null) {
             return transactionRepository.findActiveByUserIdAndYearAndType(userId, year, type.toUpperCase());
@@ -65,6 +66,7 @@ public class TransactionService {
     }
 
     @Transactional
+
     public Transaction update(Long id, TransactionUpdateRequest req) {
         Transaction t = transactionRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("거래를 찾을 수 없습니다: " + id));

@@ -1,0 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ── 페이지 루트 ── */
+.adm-page {
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  background: #f4fdf9;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 상단 바 ── */
+.adm-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 60px;
+  background: #fff;
+  border-bottom: 1px solid #e2f5ed;
+  flex-shrink: 0;
+}
+
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-brand-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1D9E75;
+  letter-spacing: -0.5px;
+}
+
+.adm-brand-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1D9E75;
+  background: #E1F5EE;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.adm-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-avatar {
+  width: 32px;
+  height: 32px;
+  background: #1D9E75;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.adm-user-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.adm-logout-btn {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid #e0e0e0;
+  background: transparent;
+  color: #999;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.adm-logout-btn:hover { border-color: #bbb; color: #666; }
+
+/* ── 콘텐츠 영역 ── */
+.adm-content {
+  flex: 1;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── 카드 공통 ── */
+.adm-card {
+  background: #fff;
+  border: 1px solid #e2f5ed;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.adm-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+}
+
+/* ── 요약 카드 ── */
+.adm-summary-row {
+  display: flex;
+  gap: 16px;
+}
+
+.adm-sum-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e2f5ed;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.adm-sum-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+}
+
+.adm-sum-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1D9E75;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  letter-spacing: -0.5px;
+}
+
+.adm-sum-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: #5DCAA5;
+}
+
+.adm-sum-sub {
+  font-size: 11px;
+  color: #bbb;
+  margin: 0;
+}
+
+/* ── 라인 차트 ── */
+.adm-chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-chart-wrap {
+  height: 220px;
+  position: relative;
+}
+
+/* ── 하단 테이블 행 ── */
+.adm-bottom-row {
+  display: flex;
+  gap: 16px;
+}
+
+.adm-table-card { flex: 1; }
+
+/* ── 테이블 ── */
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.adm-table thead th {
+  background: #f7fdf9;
+  color: #888;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.adm-table thead th.right { text-align: right; }
+
+.adm-table tbody tr {
+  border-bottom: 1px solid #f0faf5;
+  transition: background 0.12s;
+}
+
+.adm-table tbody tr:last-child { border-bottom: none; }
+.adm-table tbody tr:hover { background: #f7fdf9; }
+
+.adm-table tbody td {
+  padding: 11px 10px;
+  color: #333;
+}
+
+.adm-table tbody td.right { text-align: right; }
+
+/* 순위 뱃지 */
+.adm-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.adm-rank-1 { background: #1D9E75; color: #fff; }
+.adm-rank-2 { background: #5DCAA5; color: #fff; }
+.adm-rank-3 { background: #C8EFE3; color: #555; }
+
+.adm-stock-name    { font-weight: 600; color: #1D9E75; }
+.adm-sector-tag    { color: #888; font-size: 12px; }
+.adm-count         { font-weight: 600; color: #333; }
+.adm-sector-name   { font-weight: 600; color: #555; }
+.adm-dividend      { font-weight: 600; color: #333; }
+.adm-stocks-count  { color: #999; }
+
+/* ── 반응형 ── */
+@media (max-width: 768px) {
+  .adm-topbar   { padding: 0 16px; }
+  .adm-content  { padding: 16px; }
+  .adm-summary-row { flex-direction: column; }
+  .adm-bottom-row  { flex-direction: column; }
+}

@@ -1,7 +1,5 @@
 package com.example.dividend.dto.request;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,10 +9,13 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class DividendConfirmRequest {
 
-    @NotNull(message = "확정 배당금은 필수입니다")
-    @Positive(message = "확정 배당금은 양수여야 합니다")
-    private Integer confirmedDividend;
+    /** 확정 배당금. 양수면 CONFIRMED, null/0이면 EXPECTED로 되돌림 */
+    private Long confirmedAmount;
 
-    @NotNull(message = "지급일은 필수입니다")
+    /** 배당락일 (사용자 입력값, null 허용) */
+    private LocalDate exDividendDate;
+
     private LocalDate paymentDate;
+    // month 필드 제거 — 확정 전환 시 지급월 변경을 허용하면
+    // monthly 집계가 어긋나는 버그가 재발할 수 있으므로 차단.
 }

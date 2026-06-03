@@ -11,6 +11,9 @@ public class Transaction {
     private Long id;
 
     @Column(nullable = false)
+    private Long userId;
+
+    @Column(nullable = false)
     private Long stockId;
 
     @Column(nullable = false)
@@ -24,6 +27,14 @@ public class Transaction {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public Long getStockId() {

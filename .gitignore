@@ -35,3 +35,19 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Claude / OMC ###
+.claude/
+.omc/
+
+### Environment variables ###
+.env
+.env.local
+.env.*.local
+*.log
+run-railway.bat
+
+### Node / Frontend ###
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local

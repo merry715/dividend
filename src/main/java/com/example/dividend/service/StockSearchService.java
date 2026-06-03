@@ -1,6 +1,6 @@
 package com.example.dividend.service;
 
-import com.example.dividend.client.PythonServerClient;
+import com.example.dividend.client.DartNaverClient;
 import com.example.dividend.dto.response.StockSearchResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,12 +12,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StockSearchService {
 
-    private final PythonServerClient pythonServerClient;
+    private final DartNaverClient DartNaverClient;
 
     public List<StockSearchResult> search(String name) {
         if (name == null || name.isBlank()) {
             return Collections.emptyList();
         }
-        return pythonServerClient.searchStocks(name);
+        return DartNaverClient.searchStocks(name);
     }
 }
+
