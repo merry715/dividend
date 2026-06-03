@@ -44,6 +44,16 @@ public interface DividendRepository extends JpaRepository<Dividend, Long> {
         @Param("stockId") Long stockId,
         @Param("year") int year);
 
+    // 거래 삭제·전량 매도로 미보유(순보유 0)가 된 종목의 EXPECTED 배당 정리 (CONFIRMED 보존)
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("""
+        DELETE FROM Dividend d
+        WHERE d.userId = :userId AND d.stockId = :stockId AND d.status = 'EXPECTED'
+        """)
+    void deleteExpectedByUserIdAndStockId(
+        @Param("userId") Long userId,
+        @Param("stockId") Long stockId);
+
     // 스케줄 업데이트 시 전체 삭제 (CONFIRMED 포함)
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("""
