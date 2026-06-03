@@ -166,6 +166,15 @@
   flex-direction: column;
 }
 
+.adm-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #bbb;
+  font-size: 14px;
+}
+
 .adm-chart-wrap {
   height: 220px;
   position: relative;

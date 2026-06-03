@@ -19,22 +19,17 @@ const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9
 const today = new Date().toISOString().split('T')[0]
 const CURRENT_YEAR = new Date().getFullYear()
 
-// 지급월 표시: 현재 연도면 "5월", 다른 연도면 "2027.4월"
+// 지급월 표시: 다른 연도면 YY년M월 형식 (ex. 27년4월)
 function formatPayMonth(paymentDate, paymentYear, currentYear) {
   const month = new Date(paymentDate + 'T00:00:00').getMonth() + 1
   if (paymentYear === currentYear) return `${month}월`
-  return `${paymentYear}.${month}월`
+  return `${String(paymentYear).slice(2)}년${month}월`
 }
 
-// 배당락일 표시: 같은 연도면 "3/30", 다른 연도면 "2027.3/30"
-function formatExDate(exDate, currentYear) {
-  if (!exDate) return '-'
-  const d = new Date(exDate + 'T00:00:00')
-  const month = d.getMonth() + 1
-  const day = d.getDate()
-  const year = d.getFullYear()
-  if (year === currentYear) return `${month}/${day}`
-  return `${year}.${month}/${day}`
+function formatExDate(exDividendDate) {
+  if (!exDividendDate) return '—'
+  const d = new Date(exDividendDate + 'T00:00:00')
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default function DividendPage() {
@@ -50,11 +45,10 @@ export default function DividendPage() {
 
   // 통합 확정 전환 폼
   const [confirmForm, setConfirmForm] = useState({
-    stockId:    '',   // 선택 종목 ID
-    dividendId: '',   // 확정할 분기 row id (EXPECTED 목록에서 선택)
-    exDivDate:  '',   // 배당락일
-    payDate:    '',   // 배당지급일
-    perShare:   '',   // 주당 배당금
+    stockId: '',       // 선택 종목 ID
+    dividendId: '',    // ANNUAL: 지급월 선택
+    payDate: today,    // ANNUAL: 지급일
+    perShare: '',      // 공통: 주당 배당금
   })
 
   // 수정 모달
@@ -84,13 +78,10 @@ export default function DividendPage() {
       setStocks(stockList)
       setByStockList(byStock.data.data ?? [])
 
-      // 올해 배당 레코드 없는 종목만 자동 생성
-      const stockIdsWithDividends = new Set(
-        dividendData.filter(d => d.year === CURRENT_YEAR).map(d => d.stockId)
-      )
-      const stocksWithoutDividends = stockList.filter(s => !stockIdsWithDividends.has(s.id))
-      if (stocksWithoutDividends.length > 0 && autoGenerate) {
-        await Promise.all(stocksWithoutDividends.map(s => generateDividends(s.id, CURRENT_YEAR)))
+      // 올해 배당 레코드 없으면 자동 생성
+      const thisYearDividends = dividendData.filter(d => d.year === CURRENT_YEAR)
+      if (thisYearDividends.length === 0 && autoGenerate && stockList.length > 0) {
+        await Promise.all(stockList.map(s => generateDividends(s.id, CURRENT_YEAR)))
         return loadAll(false)
       }
     } catch (e) {
@@ -147,31 +138,36 @@ export default function DividendPage() {
     return stocks.filter(s => stocksWithExpected.has(s.id))
   }, [stocks, expectedItems])
 
-  // 선택 종목의 EXPECTED 배당 목록 (분기 선택 드롭다운용)
+  // 선택 종목의 EXPECTED 배당 목록 (ANNUAL용 지급월 선택)
   const selectedStockExpected = useMemo(() =>
     expectedItems.filter(d => d.stockId === Number(confirmForm.stockId)),
   [expectedItems, confirmForm.stockId])
 
-  // 통합 확정 저장 — 선택한 분기 1건만 확정, 나머지는 EXPECTED 유지
+  // 통합 확정 저장
   const handleConfirm = async () => {
     if (!confirmForm.stockId || !confirmForm.perShare) return
-    const stock = selectedStock
-    if (!stock) return
-
-    // 분기 선택 있으면 그 row, 없으면 첫 번째 EXPECTED
-    const targetId = confirmForm.dividendId
-      ? Number(confirmForm.dividendId)
-      : selectedStockExpected[0]?.id
-    if (!targetId) return
-
     setConverting(true)
     try {
-      await confirmDividend(targetId, {
-        confirmedAmount:  Number(confirmForm.perShare) * stock.quantity,
-        exDividendDate:   confirmForm.exDivDate  || null,
-        paymentDate:      confirmForm.payDate    || null,
-      })
-      setConfirmForm({ stockId: '', dividendId: '', exDivDate: '', payDate: '', perShare: '' })
+      if (!selectedCycle || selectedCycle === 'ANNUAL' || selectedCycle === 'MONTHLY') {
+        // ANNUAL/MONTHLY: 첫 번째 EXPECTED row 자동 선택
+        const stock = selectedStock
+        if (!stock) return
+        const targetRow = selectedStockExpected[0]
+        if (!targetRow) return
+        await confirmDividend(targetRow.id, {
+          confirmedAmount: Number(confirmForm.perShare) * stock.quantity,
+          paymentDate: confirmForm.payDate,
+        })
+      } else {
+        // QUARTERLY / SEMI_ANNUAL: 첫 지급일 + 나머지 자동생성
+        await confirmWithAutoGenerate({
+          stockId: Number(confirmForm.stockId),
+          firstPaymentDate: confirmForm.payDate,
+          dividendAmount: Number(confirmForm.perShare),
+          dividendCycle: selectedCycle,
+        })
+      }
+      setConfirmForm({ stockId: '', dividendId: '', payDate: today, perShare: '' })
       await loadAll()
     } catch (e) {
       console.error('확정 전환 실패', e)
@@ -185,25 +181,20 @@ export default function DividendPage() {
     setEditModal(stockItem)
     setEditRows(stockItem.paymentDates.map(pd => ({
       ...pd,
-      editAmount:       pd.amount,
-      editExDivDate:    pd.exDividendDate ?? '',
-      editPaymentDate:  pd.paymentDate,
-      toConfirm:        false,
+      editAmount: pd.amount,
+      editPaymentDate: pd.paymentDate,
+      toConfirm: false,
     })))
   }
 
   // 수정 모달 저장
   const handleSaveEdit = async () => {
     setSaving(true)
-    // 수정 모달이 열린 종목의 보유수량 — 주당 배당금 × 수량 = 저장할 총액
-    const editStock = stocks.find(s => s.id === editModal?.stockId)
-    const qty = editStock?.quantity ?? 1
     try {
       for (const row of editRows) {
         const body = {
-          amount:         Number(row.editAmount) * qty,   // 입력값(주당) × 보유수량 = 총액
-          exDividendDate: row.editExDivDate   || null,
-          paymentDate:    row.editPaymentDate || null,
+          amount: Number(row.editAmount),
+          paymentDate: row.editPaymentDate,
         }
         if (row.status === 'CONFIRMED' || row.toConfirm) {
           body.status = 'CONFIRMED'
@@ -334,7 +325,7 @@ export default function DividendPage() {
         </div>
       </div>
 
-      {/* ── 확정 배당 전환 ── */}
+      {/* ── 확정 배당 전환 (통합) ── */}
       <div className="dp-card dp-convert-card">
         <p className="dp-card-title">확정 배당 전환</p>
         <div className="dp-convert-row">
@@ -344,7 +335,7 @@ export default function DividendPage() {
             className="dp-fi dp-fi-select"
             value={confirmForm.stockId}
             onChange={e => setConfirmForm(f => ({
-              ...f, stockId: e.target.value, dividendId: '', exDivDate: '', payDate: '', perShare: ''
+              ...f, stockId: e.target.value, dividendId: '', perShare: ''
             }))}
           >
             <option value="">종목 선택</option>
@@ -357,58 +348,41 @@ export default function DividendPage() {
             ))}
           </select>
 
-          {/* ② 분기 선택 (EXPECTED 목록, 2개 이상일 때만 표시) */}
-          {confirmForm.stockId && selectedStockExpected.length > 1 && (
-            <select
-              className="dp-fi dp-fi-select"
-              value={confirmForm.dividendId}
-              onChange={e => setConfirmForm(f => ({ ...f, dividendId: e.target.value }))}
-            >
-              <option value="">분기 선택</option>
-              {selectedStockExpected.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.month}월
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* ③ 배당락일 */}
+          {/* ③ 지급일 */}
           {confirmForm.stockId && (
             <input
               className="dp-fi dp-fi-date"
               type="date"
-              placeholder="배당락일"
-              value={confirmForm.exDivDate}
-              onChange={e => setConfirmForm(f => ({ ...f, exDivDate: e.target.value }))}
-            />
-          )}
-
-          {/* ④ 배당지급일 */}
-          {confirmForm.stockId && (
-            <input
-              className="dp-fi dp-fi-date"
-              type="date"
-              placeholder="배당지급일"
               value={confirmForm.payDate}
               onChange={e => setConfirmForm(f => ({ ...f, payDate: e.target.value }))}
             />
           )}
 
-          {/* ⑤ 주당 배당금 */}
+          {/* ④ 주당 배당금 */}
           {confirmForm.stockId && (
             <input
               className="dp-fi dp-fi-amount"
               type="number"
-              placeholder="주당 배당금 (원)"
+              placeholder={
+                selectedCycle === 'QUARTERLY' ? '첫 번째 주당 배당금 (분기)' :
+                selectedCycle === 'SEMI_ANNUAL' ? '첫 번째 주당 배당금 (반기)' :
+                '주당 배당금 (원)'
+              }
               value={confirmForm.perShare}
               onChange={e => setConfirmForm(f => ({ ...f, perShare: e.target.value }))}
             />
           )}
 
+          {/* ⑤ 분기/반기 자동생성 안내 */}
+          {(selectedCycle === 'QUARTERLY' || selectedCycle === 'SEMI_ANNUAL') && (
+            <span style={{ fontSize: 11, color: '#1D9E75', alignSelf: 'center', whiteSpace: 'nowrap' }}>
+              {selectedCycle === 'QUARTERLY' ? '↳ 나머지 3건 자동생성 (3개월 간격)' : '↳ 나머지 1건 자동생성 (6개월)'}
+            </span>
+          )}
+
           <button
             className="dp-convert-cancel"
-            onClick={() => setConfirmForm({ stockId: '', dividendId: '', exDivDate: '', payDate: '', perShare: '' })}
+            onClick={() => setConfirmForm({ stockId: '', dividendId: '', payDate: today, perShare: '' })}
           >취소</button>
           <button
             className="dp-convert-save"
@@ -427,8 +401,8 @@ export default function DividendPage() {
               <tr>
                 <th>종목명</th>
                 <th className="right">주당 배당금</th>
-                <th className="center">배당락일</th>
                 <th className="center">지급월</th>
+                <th className="center">예상 배당락일</th>
                 <th className="center">상태</th>
                 <th className="right">예상 배당금</th>
                 <th className="center">수정</th>
@@ -442,71 +416,57 @@ export default function DividendPage() {
                   </td>
                 </tr>
               ) : (
-                byStockList.flatMap(item => {
-                  const rows = item.paymentDates ?? []
-                  return rows.map((pd, pdIdx) => {
-                    // 경과: EXPECTED이고 isReceivable=false
-                    const isExpired = pd.status === 'EXPECTED' && pd.isReceivable === false
-                    const tagClass  = pd.status === 'CONFIRMED' ? 'confirmed' : isExpired ? 'expired' : 'expected'
-                    const badgeClass = pd.status === 'CONFIRMED' ? 'confirmed' : isExpired ? 'expired' : 'expected'
-                    const badgeLabel = pd.status === 'CONFIRMED' ? '확정' : isExpired ? '경과' : '예상'
-
-                    return (
-                      <tr
-                        key={pd.dividendId}
-                        className={isExpired ? 'dp-tr-expired' : ''}
-                      >
-                        {/* 종목명 — 첫 행만, rowSpan */}
-                        {pdIdx === 0 && (
-                          <td className="dp-stock-name" rowSpan={rows.length}>
-                            {item.stockName}
-                          </td>
-                        )}
-
-                        {/* 주당 배당금 (해당 분기 per-share) */}
-                        <td className="right">
-                          {isExpired ? <span style={{ color: '#ccc' }}>—</span> : `${fmt(pd.amount ?? 0)}원`}
-                        </td>
-
-                        {/* 배당락일 */}
-                        <td className="center">
-                          <span className={`dp-month-tag ${tagClass}`}>
-                            {formatExDate(pd.exDividendDate, CURRENT_YEAR)}
-                          </span>
-                        </td>
-
-                        {/* 지급월 */}
-                        <td className="center">
-                          <span className={`dp-month-tag ${tagClass}`}>
+                byStockList.map(item => (
+                  <tr key={item.stockId}>
+                    <td className="dp-stock-name">{item.stockName}</td>
+                    <td className="right">{fmt(item.dividendPerShare ?? 0)}원</td>
+                    <td className="center">
+                      <div className="dp-month-tags">
+                        {item.paymentDates?.map(pd => (
+                          <span
+                            key={pd.dividendId}
+                            className={`dp-month-tag ${pd.status === 'CONFIRMED' ? 'confirmed' : 'expected'}`}
+                          >
                             {formatPayMonth(pd.paymentDate, pd.paymentYear, CURRENT_YEAR)}
                           </span>
-                        </td>
-
-                        {/* 상태 */}
-                        <td className="center">
-                          <span className={`dp-status-badge ${badgeClass}`}>{badgeLabel}</span>
-                        </td>
-
-                        {/* 예상 배당금 (경과 EXPECTED는 "-") */}
-                        <td className="right dp-expected-total">
-                          {isExpired
-                            ? <span style={{ color: '#ccc' }}>—</span>
-                            : `${fmt(pd.totalAmount ?? 0)}원`}
-                        </td>
-
-                        {/* 수정 버튼 — 첫 행만, rowSpan */}
-                        {pdIdx === 0 && (
-                          <td className="center" rowSpan={rows.length}>
-                            <button
-                              className="dp-edit-btn"
-                              onClick={() => handleOpenEdit(item)}
-                            >수정</button>
-                          </td>
-                        )}
-                      </tr>
-                    )
-                  })
-                })
+                        ))}
+                      </div>
+                    </td>
+                    <td className="center">
+                      <div className="dp-month-tags">
+                        {item.paymentDates?.map(pd => (
+                          <span
+                            key={`ex-${pd.dividendId}`}
+                            className={`dp-month-tag dp-ex-tag ${pd.status === 'CONFIRMED' ? 'confirmed' : 'expected'}`}
+                            title="배당기준일 기준 예상 배당락일"
+                          >
+                            {formatExDate(pd.exDividendDate)}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="center">
+                      <span className={`dp-status-badge ${
+                        item.stockStatus === 'CONFIRMED'          ? 'confirmed'
+                        : item.stockStatus === 'PARTIAL_CONFIRMED' ? 'partial'
+                        : 'expected'
+                      }`}>
+                        {item.stockStatus === 'CONFIRMED'          ? '확정'
+                          : item.stockStatus === 'PARTIAL_CONFIRMED' ? '부분확정'
+                          : '예상'}
+                      </span>
+                    </td>
+                    <td className="right dp-expected-total">{fmt(item.totalExpectedAmount ?? 0)}원</td>
+                    <td className="center">
+                      {(item.stockStatus === 'CONFIRMED' || item.stockStatus === 'PARTIAL_CONFIRMED') && (
+                        <button
+                          className="dp-edit-btn"
+                          onClick={() => handleOpenEdit(item)}
+                        >수정</button>
+                      )}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -527,6 +487,9 @@ export default function DividendPage() {
                   <div className="dp-modal-row-label">
                     <span className="dp-modal-month">
                       {formatPayMonth(row.paymentDate, row.paymentYear, CURRENT_YEAR)}
+                      {row.exDividendDate && (
+                        <span className="dp-modal-ex">락 {formatExDate(row.exDividendDate)}</span>
+                      )}
                     </span>
                     <span className={`dp-modal-badge ${row.status === 'CONFIRMED' ? 'confirmed' : 'expected'}`}>
                       {row.status === 'CONFIRMED' ? '확정' : '예상'}
@@ -536,7 +499,7 @@ export default function DividendPage() {
                     <input
                       className="dp-fi dp-fi-amount"
                       type="number"
-                      placeholder="주당 배당금 (원)"
+                      placeholder="주당 배당금"
                       value={row.editAmount}
                       onChange={e => setEditRows(rows => rows.map((r, i) =>
                         i === idx ? { ...r, editAmount: e.target.value } : r
@@ -545,18 +508,6 @@ export default function DividendPage() {
                     <input
                       className="dp-fi dp-fi-date"
                       type="date"
-                      title="배당락일"
-                      placeholder="배당락일"
-                      value={row.editExDivDate}
-                      onChange={e => setEditRows(rows => rows.map((r, i) =>
-                        i === idx ? { ...r, editExDivDate: e.target.value } : r
-                      ))}
-                    />
-                    <input
-                      className="dp-fi dp-fi-date"
-                      type="date"
-                      title="배당지급일"
-                      placeholder="배당지급일"
                       value={row.editPaymentDate}
                       onChange={e => setEditRows(rows => rows.map((r, i) =>
                         i === idx ? { ...r, editPaymentDate: e.target.value } : r

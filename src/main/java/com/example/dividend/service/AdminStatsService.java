@@ -4,6 +4,8 @@ import com.example.dividend.entity.StockSector;
 import com.example.dividend.repository.DividendRepository;
 import com.example.dividend.repository.StockRepository;
 import com.example.dividend.repository.UserRepository;
+
+import static com.example.dividend.repository.UserRepository.ROLE_ADMIN;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -24,7 +26,7 @@ public class AdminStatsService {
 
     @Cacheable(value = "adminStats", key = "#root.methodName")
     public Map<String, Object> getUserStats() {
-        long total = userRepository.count();
+        long total = userRepository.countByRoleNot(ROLE_ADMIN);
 
         List<Object[]> rows = userRepository.findMonthlySignupTrend();
         List<Map<String, Object>> monthly = rows.stream().map(r -> {

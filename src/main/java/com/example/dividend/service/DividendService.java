@@ -650,6 +650,51 @@ public class DividendService {
         return null;
     }
 
+    // ── 배당락일 추정 유틸 (배당기준일 미제공 시 지급일 역산) ────────────────────
+
+    /** 지급일 앵커와 같은 연도 간격으로 날짜를 대상 연도에 맞춤 */
+    private static LocalDate shiftToTargetYear(LocalDate date, int targetYear) {
+        return date.plusYears((long) targetYear - date.getYear());
+    }
+
+    private static LocalDate shiftToTargetYear(LocalDate date, int targetYear, LocalDate anchorPayDate) {
+        return date.plusYears((long) targetYear - anchorPayDate.getYear());
+    }
+
+    /**
+     * 공공데이터 배당기준일(dvdnBasDt) → 예상 배당락일.
+     * 기준일 없으면 지급일 기준 약 2개월 전으로 추정.
+     */
+    private static LocalDate resolveExDividendDate(LocalDate baseDt, LocalDate anchorPayDate, int targetYear) {
+        if (baseDt != null && anchorPayDate != null) {
+            return shiftToTargetYear(baseDt, targetYear, anchorPayDate);
+        }
+        if (anchorPayDate != null) {
+            return estimateExDateFromPayDate(shiftToTargetYear(anchorPayDate, targetYear));
+        }
+        return null;
+    }
+
+    /** 배당기준일 미제공 시 지급일 역산 (한국 시장 관행: 약 2개월 전) */
+    private static LocalDate estimateExDateFromPayDate(LocalDate payDate) {
+        if (payDate == null) return null;
+        return payDate.minusMonths(2);
+    }
+
+    /**
+     * EXPECTED 배당 수령 자격 판별 (개선판).
+     * 비교 날짜는 배당락일(exDividendDate) 우선, 없으면 지급일(paymentDate).
+     * - 첫 매수일 null → 제외 (거래내역 없음 = 미보유)
+     * - 비교 날짜 null → 포함 (보수적)
+     * - 비교 날짜 >= 첫 매수일 → 포함
+     */
+    private boolean isExpectedReceivable(Dividend d, LocalDate firstBuyDate) {
+        LocalDate cutoffDate = d.getExDividendDate() != null
+                ? d.getExDividendDate() : d.getPaymentDate();
+        if (cutoffDate == null) return true;
+        return firstBuyDate != null && !cutoffDate.isBefore(firstBuyDate);
+    }
+
     /**
      * 수령 가능 여부: 배당락일이 null이거나 첫 매수일 이후이면 true.
      * - EXPECTED 배당의 예상 합산 포함 여부를 동적 판별하는 컷오프 1.
