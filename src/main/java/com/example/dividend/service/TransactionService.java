@@ -15,11 +15,14 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final DividendRepository dividendRepository;
+    private final DividendService dividendService;
 
     public TransactionService(TransactionRepository transactionRepository,
-                              DividendRepository dividendRepository) {
+                              DividendRepository dividendRepository,
+                              DividendService dividendService) {
         this.transactionRepository = transactionRepository;
         this.dividendRepository = dividendRepository;
+        this.dividendService = dividendService;
     }
 
     /**
@@ -62,6 +65,8 @@ public class TransactionService {
         Transaction saved = transactionRepository.save(t);
         // 전량 매도 등으로 순보유가 0이 되면 EXPECTED 배당 정리
         cleanupExpectedDividendsIfUnheld(userId, saved.getStockId());
+        // 과거 거래 변경 → 해당 종목 과거 연도 배당 재계산 (올해 배당은 미영향)
+        dividendService.recalcPastDividends(userId, saved.getStockId());
         return saved;
     }
 
@@ -81,6 +86,8 @@ public class TransactionService {
         Transaction saved = transactionRepository.save(t);
         // 수량·유형 수정으로 순보유가 0이 되면 EXPECTED 배당 정리
         cleanupExpectedDividendsIfUnheld(saved.getUserId(), saved.getStockId());
+        // 거래 수정 → 과거 배당 재계산
+        dividendService.recalcPastDividends(saved.getUserId(), saved.getStockId());
         return saved;
     }
 
@@ -93,6 +100,8 @@ public class TransactionService {
         transactionRepository.deleteById(id);
         // 삭제로 순보유가 0이 되면 EXPECTED 배당 정리 (CONFIRMED 보존)
         cleanupExpectedDividendsIfUnheld(userId, stockId);
+        // 거래 삭제 → 과거 배당 재계산
+        dividendService.recalcPastDividends(userId, stockId);
     }
 
     public List<Transaction> getByStockId(Long userId, Long stockId) {
