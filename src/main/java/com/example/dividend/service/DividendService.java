@@ -441,6 +441,7 @@ public class DividendService {
     public List<Map<String, Object>> getYearly(Long userId) {
         // JPQL 집계 쿼리의 @SQLRestriction 적용 불안정 회피 → Java 레벨 집계
         Set<Long> heldIds = heldStockIds(userId); // 순보유 > 0 종목만 (거래 0 종목 제외)
+        Map<Long, LocalDate> firstBuyMap = buildFirstBuyDateMap(userId);
         List<Dividend> all = dividendRepository.findByUserId(userId).stream()
                 .filter(d -> heldIds.contains(d.getStockId()))
                 .collect(Collectors.toList());
@@ -448,12 +449,15 @@ public class DividendService {
         // 연도별 그룹핑
         Map<Integer, long[]> byYear = new TreeMap<>(); // [0]=confirmed, [1]=expected
         for (Dividend d : all) {
-            long[] sums = byYear.computeIfAbsent(d.getYear(), k -> new long[]{0L, 0L});
+            int year = d.getYear();
+            if (d.getPaymentDate() != null && d.getPaymentDate().getYear() != year) continue;
+            long[] sums = byYear.computeIfAbsent(year, k -> new long[]{0L, 0L});
             if ("CONFIRMED".equals(d.getStatus()) && d.getConfirmedAmount() != null) {
                 sums[0] += d.getConfirmedAmount().longValue();
                 sums[1] += d.getConfirmedAmount().longValue();
             } else if ("EXPECTED".equals(d.getStatus()) && d.getExpectedAmount() != null) {
-                sums[1] += d.getExpectedAmount().longValue();
+                if (isReceivable(d, firstBuyMap.get(d.getStockId())))
+                    sums[1] += d.getExpectedAmount().longValue();
             }
         }
         List<Map<String, Object>> result = new ArrayList<>();
